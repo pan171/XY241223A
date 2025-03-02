@@ -22,6 +22,7 @@ from pages.crack_identification_page import CrackIdentificationPage
 from pages.parameter_calculation_page import ParameterCalculationPage
 from pages.comprehensive_outcome_page import ComprehensiveOutcomePage
 from pages.distribution_page import DistributionPage
+from pages.hydrodynamic_page import HydrodynamicPage
 
 
 class MainWindow(QMainWindow):
@@ -75,7 +76,7 @@ class MainWindow(QMainWindow):
         mud_logging_buttons_layout1 = QHBoxLayout()
         mud_logging_buttons_layout2 = QHBoxLayout()
         self.add_group_page(
-            mud_logging_buttons_layout1, "流体力学模型", QLabel("流体力学模型页面")
+            mud_logging_buttons_layout1, "流体力学模型", HydrodynamicPage()
         )
         self.add_group_page(
             mud_logging_buttons_layout1, "BP神经网络模型", QLabel("BP神经网络页面")

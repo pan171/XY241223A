@@ -256,6 +256,7 @@ class ParameterCalculationPage(QWidget):
         df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / ((1 / r_mf) - (1 / r_w))
         df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
         df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
+        df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
 
         df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
         if df_section.empty:

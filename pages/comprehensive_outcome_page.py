@@ -74,6 +74,10 @@ class ComprehensiveOutcomePage(QWidget):
         comb_1.addWidget(self.r_mf_label)
         comb_1.addWidget(self.r_mf_input)
 
+        self.fmi_upload_btn = QPushButton("上传 FMI")
+        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
+        comb_1.addWidget(self.fmi_upload_btn)
+
         self.layout.addLayout(comb_1)
         ################################################
 
@@ -139,6 +143,21 @@ class ComprehensiveOutcomePage(QWidget):
         self.layout.addWidget(self.download_btn)
 
         self.setGeometry(100, 100, 600, 400)
+
+    def upload_fmi_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择 FMI 图片", "", "图片文件 (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if file_path:
+            output_dir = resource_path("img/")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, "fmi_example.png")
+            try:
+                with open(file_path, "rb") as src, open(output_path, "wb") as dst:
+                    dst.write(src.read())
+                QMessageBox.information(self, "成功", "FMI 图片上传成功！")
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"图片上传失败: {str(e)}")
 
     def upload_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -256,104 +275,129 @@ class ComprehensiveOutcomePage(QWidget):
         df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / ((1 / r_mf) - (1 / r_w))
         df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
         df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
+        df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
 
         df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
         if df_section.empty:
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
 
-        _, axes = plt.subplots(nrows=1, ncols=7, figsize=(20, 10), sharey=True)
+        _, axes = plt.subplots(nrows=1, ncols=12, figsize=(31, 10), sharey=True)
         for ax in axes:
             ax.set_ylim(bottom=max(df_section["Depth"]), top=min(df_section["Depth"]))
 
-        # fig1: AC —— blue
-        axes[0].plot(df_section["AC"], df_section["Depth"], color="blue")
-        axes[0].grid(linestyle="--", alpha=0.5)
-        axes[0].set_xlabel("AC")
-        axes[0].set_title("AC")
+        # 1. axes[0]
         axes[0].set_ylabel("Depth (m)")
-
-        # fig2: DEN —— green
-        axes[1].plot(df_section["DEN"], df_section["Depth"], color="green")
-        axes[1].grid(linestyle="--", alpha=0.5)
-        axes[1].set_xlabel("DEN")
-        axes[1].set_title("DEN")
-
-        # fig3: GR —— red
-        axes[2].plot(df_section["GR"], df_section["Depth"], color="red")
-        axes[2].grid(linestyle="--", alpha=0.5)
-        axes[2].set_xlabel("GR")
-        axes[2].set_title("GR")
-
-        # fig4: CNL —— yellow
-        axes[3].plot(df_section["CNL"], df_section["Depth"], color="yellow")
-        axes[3].grid(linestyle="--", alpha=0.5)
-        axes[3].set_xlabel("CNL")
-        axes[3].set_title("CNL")
-
-        # fig5: RLLD & RLLS —— purple & orange
-        axes[4].plot(
-            df_section["RLLD"], df_section["Depth"], color="purple", label="RLLD"
-        )
-        axes[4].plot(
-            df_section["RLLS"], df_section["Depth"], color="orange", label="RLLS"
-        )
-        axes[4].grid(linestyle="--", alpha=0.5)
-        axes[4].set_xlabel("RLLD - RLLS")
-        axes[4].set_title("RLLD & RLLS")
-        axes[4].legend()
-
-        # # fig6: FVA & FVPA —— black & brown
-        # axes[5].barh(
-        #     df_section["Depth"], df_section["FVPA"], color="brown", label="FVPA"
-        # )
-        # axes[5].barh(df_section["Depth"], df_section["FVA"], color="black", label="FVA")
-        # axes[5].grid(linestyle="--", alpha=0.5)
-        # axes[5].set_xlabel("FVA - FVPA")
-        # axes[5].set_title("FVA & FVPA")
-        # axes[5].legend()
-
-        # # fig7: FVDC & FG —— cyan & magenta
-        # axes[6].barh(
-        #     df_section["Depth"], df_section["FVDC"], color="cyan", label="FVDC"
-        # )
-        # axes[6].barh(df_section["Depth"], df_section["FG"], color="magenta", label="FG")
-        # axes[6].grid(linestyle="--", alpha=0.5)
-        # axes[6].set_xlabel("FVDC - FG")
-        # axes[6].set_title("FVDC & FG")
-        # axes[6].legend()
-
-        # fig6: FVA & FVPA —— black & brown (改为曲线填充)
-        axes[5].plot(
-            df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
-        )
-        axes[5].fill_betweenx(
-            df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
-        )
-        axes[5].plot(df_section["FVA"], df_section["Depth"], color="black", label="FVA")
-        axes[5].fill_betweenx(
-            df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
-        )
-        axes[5].grid(linestyle="--", alpha=0.5)
-        axes[5].set_xlabel("FVA - FVPA")
-        axes[5].set_title("FVA & FVPA")
-        axes[5].legend()
-
-        # fig7: FVDC & FG —— cyan & magenta (改为曲线填充)
-        axes[6].plot(
+        axes[0].plot(
             df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
         )
-        axes[6].fill_betweenx(
+        axes[0].fill_betweenx(
             df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
         )
-        axes[6].plot(df_section["FG"], df_section["Depth"], color="magenta", label="FG")
+        axes[0].grid(linestyle="--", alpha=0.5)
+        axes[0].set_xlabel("padding")
+        axes[0].set_title("padding")
+        axes[0].legend()
+
+        axes[1].plot(df_section["AC"], df_section["Depth"], color="blue")
+        axes[1].grid(linestyle="--", alpha=0.5)
+        axes[1].set_xlabel("AC")
+        axes[1].set_title("AC")
+
+        axes[2].plot(df_section["DEN"], df_section["Depth"], color="green")
+        axes[2].grid(linestyle="--", alpha=0.5)
+        axes[2].set_xlabel("DEN")
+        axes[2].set_title("DEN")
+
+        axes[3].plot(df_section["GR"], df_section["Depth"], color="red")
+        axes[3].grid(linestyle="--", alpha=0.5)
+        axes[3].set_xlabel("GR")
+        axes[3].set_title("GR")
+
+        axes[4].plot(df_section["CNL"], df_section["Depth"], color="yellow")
+        axes[4].grid(linestyle="--", alpha=0.5)
+        axes[4].set_xlabel("CNL")
+        axes[4].set_title("CNL")
+
+        axes[5].plot(
+            df_section["RLLD"], df_section["Depth"], color="purple", label="RLLD"
+        )
+        axes[5].plot(
+            df_section["RLLS"], df_section["Depth"], color="orange", label="RLLS"
+        )
+        axes[5].grid(linestyle="--", alpha=0.5)
+        axes[5].set_xlabel("RLLD - RLLS")
+        axes[5].set_title("RLLD & RLLS")
+        axes[5].legend()
+
+        axes[6].plot(
+            df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
+        )
         axes[6].fill_betweenx(
-            df_section["Depth"], df_section["FG"], color="magenta", alpha=0.5
+            df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
+        )
+        axes[6].plot(df_section["FVA"], df_section["Depth"], color="black", label="FVA")
+        axes[6].fill_betweenx(
+            df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
         )
         axes[6].grid(linestyle="--", alpha=0.5)
-        axes[6].set_xlabel("FVDC - FG")
-        axes[6].set_title("FVDC & FG")
+        axes[6].set_xlabel("FVA - FVPA")
+        axes[6].set_title("FVA & FVPA")
         axes[6].legend()
+
+        axes[7].plot(
+            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+        )
+        axes[7].fill_betweenx(
+            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        )
+        axes[7].grid(linestyle="--", alpha=0.5)
+        axes[7].set_xlabel("FVDC")
+        axes[7].set_title("FVDC")
+        axes[7].legend()
+
+        axes[8].plot(df_section["Kf"], df_section["Depth"], color="magenta", label="Kf")
+        axes[8].fill_betweenx(
+            df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
+        )
+        axes[8].grid(linestyle="--", alpha=0.5)
+        axes[8].set_xlabel("Kf")
+        axes[8].set_title("Kf")
+        axes[8].legend()
+
+        axes[9].plot(
+            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+        )
+        axes[9].fill_betweenx(
+            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        )
+        axes[9].grid(linestyle="--", alpha=0.5)
+        axes[9].set_xlabel("padding")
+        axes[9].set_title("padding")
+        axes[9].legend()
+
+        axes[10].plot(
+            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+        )
+        axes[10].fill_betweenx(
+            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        )
+        axes[10].grid(linestyle="--", alpha=0.5)
+        axes[10].set_xlabel("padding")
+        axes[10].set_title("padding")
+        axes[10].legend()
+
+        # 3. 插入 FMI 图片
+        fmi_image_path = resource_path("data/example.jpg")  # 确保图片路径正确
+        if os.path.exists(fmi_image_path):
+            fmi_img = plt.imread(fmi_image_path)
+            axes[11].imshow(
+                fmi_img,
+                aspect="auto",
+                extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
+            )
+        axes[11].set_title("FMI")
+        axes[11].axis("off")  # 不显示坐标轴
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()

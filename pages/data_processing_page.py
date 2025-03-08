@@ -22,7 +22,7 @@ class DataProcessingPage(QWidget):
         layout = QVBoxLayout()
 
         self.filter_combo = QComboBox()
-        self.filter_combo.addItems(["移动平均滤波", "中值滤波", "指数平滑", "高斯滤波"])
+        self.filter_combo.addItems(["移动平均滤波", "中值滤波", "指数平滑", "高斯滤波", "归一化"])
         self.filter_combo.setItemDelegate(CenterDelegate(self.filter_combo))
         self.filter_combo.setStyle(CenteredComboBoxStyle())
         layout.addWidget(self.filter_combo)
@@ -73,6 +73,10 @@ class DataProcessingPage(QWidget):
                 for col in df.columns:
                     if pd.api.types.is_numeric_dtype(df[col]):
                         df[col] = gaussian_filter1d(df[col].values, sigma=1)
+            elif selected_filter == "归一化":
+                for col in df.columns:
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
 
             GlobalData.filtered_df = df
             self.display_table(df)

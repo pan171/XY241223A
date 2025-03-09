@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QFileDialog,
+    QMessageBox,
 )
 from pages.style import CenterDelegate, CenteredComboBoxStyle
 from pages.config import GlobalData
@@ -22,7 +23,9 @@ class DataProcessingPage(QWidget):
         layout = QVBoxLayout()
 
         self.filter_combo = QComboBox()
-        self.filter_combo.addItems(["移动平均滤波", "中值滤波", "指数平滑", "高斯滤波", "归一化"])
+        self.filter_combo.addItems(
+            ["移动平均滤波", "中值滤波", "指数平滑", "高斯滤波", "归一化"]
+        )
         self.filter_combo.setItemDelegate(CenterDelegate(self.filter_combo))
         self.filter_combo.setStyle(CenteredComboBoxStyle())
         layout.addWidget(self.filter_combo)
@@ -49,37 +52,51 @@ class DataProcessingPage(QWidget):
             self, "选择Excel文件", "", "Excel 文件 (*.xlsx *.xls)"
         )
         if file_path:
-            df = pd.read_excel(file_path)
-            GlobalData.df = df.copy()
-            GlobalData.filtered_df = df.copy()
-            self.display_table(df)
+            try:
+                df = pd.read_excel(file_path)
+                GlobalData.df = df.copy()
+                GlobalData.filtered_df = df.copy()
+                self.display_table(df)
+                QMessageBox.information(self, "成功", "文件上传成功！")
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"文件上传失败: {str(e)}")
 
     def apply_filter(self):
         """filter algorithms"""
         if GlobalData.filtered_df is not None:
-            df = GlobalData.filtered_df.copy()
-            selected_filter = self.filter_combo.currentText()
+            try:
+                df = GlobalData.filtered_df.copy()
+                selected_filter = self.filter_combo.currentText()
 
-            if selected_filter == "移动平均滤波":
-                df = df.rolling(window=3, min_periods=1).mean()
+                if selected_filter == "移动平均滤波":
+                    df = df.rolling(window=3, min_periods=1).mean()
 
-            elif selected_filter == "中值滤波":
-                df = df.rolling(window=3, min_periods=1).median()
+                elif selected_filter == "中值滤波":
+                    df = df.rolling(window=3, min_periods=1).median()
 
-            elif selected_filter == "指数平滑":
-                df = df.ewm(span=3, adjust=False).mean()
+                elif selected_filter == "指数平滑":
+                    df = df.ewm(span=3, adjust=False).mean()
 
-            elif selected_filter == "高斯滤波":
-                for col in df.columns:
-                    if pd.api.types.is_numeric_dtype(df[col]):
-                        df[col] = gaussian_filter1d(df[col].values, sigma=1)
-            elif selected_filter == "归一化":
-                for col in df.columns:
-                    if pd.api.types.is_numeric_dtype(df[col]):
-                        df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
+                elif selected_filter == "高斯滤波":
+                    for col in df.columns:
+                        if pd.api.types.is_numeric_dtype(df[col]):
+                            df[col] = gaussian_filter1d(df[col].values, sigma=1)
+                elif selected_filter == "归一化":
+                    for col in df.columns:
+                        if pd.api.types.is_numeric_dtype(df[col]):
+                            df[col] = (df[col] - df[col].min()) / (
+                                df[col].max() - df[col].min()
+                            )
 
-            GlobalData.filtered_df = df
-            self.display_table(df)
+                GlobalData.filtered_df = df
+                self.display_table(df)
+                QMessageBox.information(
+                    self, "成功", f"已成功应用{selected_filter}算法！"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"数据处理失败: {str(e)}")
+        else:
+            QMessageBox.warning(self, "警告", "请先上传数据文件！")
 
     def download_filtered_data(self):
         if GlobalData.filtered_df is not None:
@@ -87,7 +104,13 @@ class DataProcessingPage(QWidget):
                 self, "保存Excel文件", "filtered_data.xlsx", "Excel 文件 (*.xlsx)"
             )
             if file_path:
-                GlobalData.filtered_df.to_excel(file_path, index=False)
+                try:
+                    GlobalData.filtered_df.to_excel(file_path, index=False)
+                    QMessageBox.information(self, "成功", "数据已成功保存！")
+                except Exception as e:
+                    QMessageBox.critical(self, "错误", f"保存文件失败: {str(e)}")
+        else:
+            QMessageBox.warning(self, "警告", "没有可下载的数据！")
 
     def display_table(self, df):
         self.table_widget.setRowCount(df.shape[0])

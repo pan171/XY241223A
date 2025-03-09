@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QMessageBox,
     QHBoxLayout,
+    QScrollArea,
 )
 from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
@@ -27,9 +28,18 @@ class ParameterCalculationPage(QWidget):
     def initUI(self):
         self.layout = QVBoxLayout()
 
+        # Create horizontal layout for upload buttons
+        upload_buttons_layout = QHBoxLayout()
+
         self.upload_btn = QPushButton("上传 Excel 文件")
         self.upload_btn.clicked.connect(self.upload_file)
-        self.layout.addWidget(self.upload_btn)
+        upload_buttons_layout.addWidget(self.upload_btn)
+
+        self.fmi_upload_btn = QPushButton("上传 FMI")
+        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
+        upload_buttons_layout.addWidget(self.fmi_upload_btn)
+
+        self.layout.addLayout(upload_buttons_layout)
 
         ##################### Line 1 ###########################
         comb_1 = QHBoxLayout()
@@ -73,10 +83,6 @@ class ParameterCalculationPage(QWidget):
         self.r_mf_input.setPlaceholderText("r_mf")
         comb_1.addWidget(self.r_mf_label)
         comb_1.addWidget(self.r_mf_input)
-
-        self.fmi_upload_btn = QPushButton("上传 FMI")
-        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
-        comb_1.addWidget(self.fmi_upload_btn)
 
         self.layout.addLayout(comb_1)
         ################################################
@@ -129,12 +135,24 @@ class ParameterCalculationPage(QWidget):
         self.status_label.setStyleSheet("font-size: 12px; padding: 2px;")
         self.layout.addWidget(self.status_label)
 
+        # Create a scroll area for the image
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMinimumHeight(300)  # Set minimum height
+
+        # Create a container widget for the image
+        self.image_container = QWidget()
+        self.image_layout = QVBoxLayout(self.image_container)
+
         self.image_label = QLabel("裂缝通道参数计算结果")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.image_label)
-        self.image_container = QVBoxLayout()
+        self.image_label.setMinimumSize(
+            580, 280
+        )  # Set minimum size for the image label
+        self.image_layout.addWidget(self.image_label)
 
-        self.setLayout(self.layout)
+        self.scroll_area.setWidget(self.image_container)
+        self.layout.addWidget(self.scroll_area)
 
         self.current_file_path = None
 
@@ -142,7 +160,8 @@ class ParameterCalculationPage(QWidget):
         self.download_btn.clicked.connect(self.download_image)
         self.layout.addWidget(self.download_btn)
 
-        self.setGeometry(100, 100, 600, 400)
+        self.setLayout(self.layout)
+        self.setMinimumSize(600, 600)  # Set minimum window size
 
     def upload_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -322,26 +341,6 @@ class ParameterCalculationPage(QWidget):
         axes[4].set_xlabel("RLLD - RLLS")
         axes[4].set_title("RLLD & RLLS")
         axes[4].legend()
-
-        # # fig6: FVA & FVPA —— black & brown
-        # axes[5].barh(
-        #     df_section["Depth"], df_section["FVPA"], color="brown", label="FVPA"
-        # )
-        # axes[5].barh(df_section["Depth"], df_section["FVA"], color="black", label="FVA")
-        # axes[5].grid(linestyle="--", alpha=0.5)
-        # axes[5].set_xlabel("FVA - FVPA")
-        # axes[5].set_title("FVA & FVPA")
-        # axes[5].legend()
-
-        # # fig7: FVDC & FG —— cyan & magenta
-        # axes[6].barh(
-        #     df_section["Depth"], df_section["FVDC"], color="cyan", label="FVDC"
-        # )
-        # axes[6].barh(df_section["Depth"], df_section["FG"], color="magenta", label="FG")
-        # axes[6].grid(linestyle="--", alpha=0.5)
-        # axes[6].set_xlabel("FVDC - FG")
-        # axes[6].set_title("FVDC & FG")
-        # axes[6].legend()
 
         # fig6: FVA & FVPA —— black & brown (改为曲线填充)
         axes[5].plot(

@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QMessageBox,
     QHBoxLayout,
+    QScrollArea,
 )
 from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
@@ -27,9 +28,18 @@ class ComprehensiveOutcomePage(QWidget):
     def initUI(self):
         self.layout = QVBoxLayout()
 
+        # Create horizontal layout for upload buttons
+        upload_buttons_layout = QHBoxLayout()
+
         self.upload_btn = QPushButton("上传 Excel 文件")
         self.upload_btn.clicked.connect(self.upload_file)
-        self.layout.addWidget(self.upload_btn)
+        upload_buttons_layout.addWidget(self.upload_btn)
+
+        self.fmi_upload_btn = QPushButton("上传 FMI")
+        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
+        upload_buttons_layout.addWidget(self.fmi_upload_btn)
+
+        self.layout.addLayout(upload_buttons_layout)
 
         ##################### Line 1 ###########################
         comb_1 = QHBoxLayout()
@@ -74,10 +84,6 @@ class ComprehensiveOutcomePage(QWidget):
         comb_1.addWidget(self.r_mf_label)
         comb_1.addWidget(self.r_mf_input)
 
-        self.fmi_upload_btn = QPushButton("上传 FMI")
-        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
-        comb_1.addWidget(self.fmi_upload_btn)
-
         self.layout.addLayout(comb_1)
         ################################################
 
@@ -115,6 +121,10 @@ class ComprehensiveOutcomePage(QWidget):
         comb_2.addWidget(self.c3_label)
         comb_2.addWidget(self.c3_input)
 
+        # self.fmi_upload_btn = QPushButton("上传 FMI")
+        # self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
+        # comb_2.addWidget(self.fmi_upload_btn)
+
         self.layout.addLayout(comb_2)
 
         ################################################
@@ -129,12 +139,24 @@ class ComprehensiveOutcomePage(QWidget):
         self.status_label.setStyleSheet("font-size: 12px; padding: 2px;")
         self.layout.addWidget(self.status_label)
 
+        # Create a scroll area for the image
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMinimumHeight(300)  # Set minimum height
+
+        # Create a container widget for the image
+        self.image_container = QWidget()
+        self.image_layout = QVBoxLayout(self.image_container)
+
         self.image_label = QLabel("测录井综合图结果")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.image_label)
-        self.image_container = QVBoxLayout()
+        self.image_label.setMinimumSize(
+            580, 280
+        )  # Set minimum size for the image label
+        self.image_layout.addWidget(self.image_label)
 
-        self.setLayout(self.layout)
+        self.scroll_area.setWidget(self.image_container)
+        self.layout.addWidget(self.scroll_area)
 
         self.current_file_path = None
 
@@ -142,7 +164,8 @@ class ComprehensiveOutcomePage(QWidget):
         self.download_btn.clicked.connect(self.download_image)
         self.layout.addWidget(self.download_btn)
 
-        self.setGeometry(100, 100, 600, 400)
+        self.setLayout(self.layout)
+        self.setMinimumSize(600, 600)  # Set minimum window size
 
     def upload_fmi_image(self):
         file_path, _ = QFileDialog.getOpenFileName(

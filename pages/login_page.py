@@ -88,7 +88,7 @@ class LoginWindow(QWidget):
         password = self.pwd_input.text()
 
         if username in user_data and user_data[username] == password:
-            self.main_window.show()
+            self.main_window.showFullScreen()
             self.close()
         else:
             QMessageBox.warning(self, "登录失败", "用户名或密码错误")

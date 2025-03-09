@@ -155,54 +155,110 @@ class DistributionPage(QWidget):
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
 
-        _, axes = plt.subplots(nrows=1, ncols=7, figsize=(20, 10), sharey=True)
-        for ax in axes:
+        # Create a figure with 2 rows - scatter plots on top and histograms below
+        fig, axes = plt.subplots(nrows=2, ncols=7, figsize=(24, 16))
+
+        # Top row for scatter plots (axes[0])
+        scatter_axes = axes[0]
+        for ax in scatter_axes:
             ax.set_ylim(bottom=max(df_section["井深"]), top=min(df_section["井深"]))
 
         # fig1: 漏失速度 - blue
-        axes[0].scatter(df_section["漏失速度"], df_section["井深"], color="blue")
-        axes[0].grid(linestyle="--", alpha=0.5)
-        axes[0].set_xlabel("漏失速度")
-        axes[0].set_ylabel("井深 (m)")
-        axes[0].set_title("漏失速度")
+        scatter_axes[0].scatter(
+            df_section["漏失速度"], df_section["井深"], color="blue"
+        )
+        scatter_axes[0].grid(linestyle="--", alpha=0.5)
+        scatter_axes[0].set_xlabel("漏失速度")
+        scatter_axes[0].set_ylabel("井深 (m)")
+        scatter_axes[0].set_title("漏失速度 (散点图)")
 
         # fig2: 漏失量 - green
-        axes[1].scatter(df_section["漏失量"], df_section["井深"], color="green")
-        axes[1].grid(linestyle="--", alpha=0.5)
-        axes[1].set_xlabel("漏失量")
-        axes[1].set_title("漏失量")
+        scatter_axes[1].scatter(df_section["漏失量"], df_section["井深"], color="green")
+        scatter_axes[1].grid(linestyle="--", alpha=0.5)
+        scatter_axes[1].set_xlabel("漏失量")
+        scatter_axes[1].set_title("漏失量 (散点图)")
 
         # fig3: 塑性黏度 - red
-        axes[2].scatter(df_section["塑性黏度"], df_section["井深"], color="red")
-        axes[2].grid(linestyle="--", alpha=0.5)
-        axes[2].set_xlabel("塑性黏度")
-        axes[2].set_title("塑性黏度")
+        scatter_axes[2].scatter(df_section["塑性黏度"], df_section["井深"], color="red")
+        scatter_axes[2].grid(linestyle="--", alpha=0.5)
+        scatter_axes[2].set_xlabel("塑性黏度")
+        scatter_axes[2].set_title("塑性黏度 (散点图)")
 
         # fig4: 钻速 - purple
-        axes[3].scatter(df_section["钻速"], df_section["井深"], color="purple")
-        axes[3].grid(linestyle="--", alpha=0.5)
-        axes[3].set_xlabel("钻速")
-        axes[3].set_title("钻速")
+        scatter_axes[3].scatter(df_section["钻速"], df_section["井深"], color="purple")
+        scatter_axes[3].grid(linestyle="--", alpha=0.5)
+        scatter_axes[3].set_xlabel("钻速")
+        scatter_axes[3].set_title("钻速 (散点图)")
 
         # fig5: 钻井液排量 - orange
-        axes[4].scatter(df_section["钻井液排量"], df_section["井深"], color="orange")
-        axes[4].grid(linestyle="--", alpha=0.5)
-        axes[4].set_xlabel("钻井液排量")
-        axes[4].set_title("钻井液排量 ")
+        scatter_axes[4].scatter(
+            df_section["钻井液排量"], df_section["井深"], color="orange"
+        )
+        scatter_axes[4].grid(linestyle="--", alpha=0.5)
+        scatter_axes[4].set_xlabel("钻井液排量")
+        scatter_axes[4].set_title("钻井液排量 (散点图)")
 
         # fig6: 泵压 - cyan
-        axes[5].scatter(df_section["泵压"], df_section["井深"], color="cyan")
-        axes[5].grid(linestyle="--", alpha=0.5)
-        axes[5].set_xlabel("泵压")
-        axes[5].set_title("泵压")
+        scatter_axes[5].scatter(df_section["泵压"], df_section["井深"], color="cyan")
+        scatter_axes[5].grid(linestyle="--", alpha=0.5)
+        scatter_axes[5].set_xlabel("泵压")
+        scatter_axes[5].set_title("泵压 (散点图)")
 
         # fig7: 裂缝宽度 - magenta
-        axes[6].scatter(df_section["裂缝宽度"], df_section["井深"], color="magenta")
-        axes[6].grid(linestyle="--", alpha=0.5)
-        axes[6].set_xlabel("裂缝宽度")
-        axes[6].set_title("裂缝宽度")
+        scatter_axes[6].scatter(
+            df_section["裂缝宽度"], df_section["井深"], color="magenta"
+        )
+        scatter_axes[6].grid(linestyle="--", alpha=0.5)
+        scatter_axes[6].set_xlabel("裂缝宽度")
+        scatter_axes[6].set_title("裂缝宽度 (散点图)")
 
-        plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
+        # Bottom row for histograms (axes[1])
+        hist_axes = axes[1]
+
+        # Histogram 1: 漏失速度 - blue
+        hist_axes[0].hist(df_section["漏失速度"], bins=15, color="blue", alpha=0.7)
+        hist_axes[0].grid(linestyle="--", alpha=0.5)
+        hist_axes[0].set_xlabel("漏失速度")
+        hist_axes[0].set_ylabel("频次")
+        hist_axes[0].set_title("漏失速度 (直方图)")
+
+        # Histogram 2: 漏失量 - green
+        hist_axes[1].hist(df_section["漏失量"], bins=15, color="green", alpha=0.7)
+        hist_axes[1].grid(linestyle="--", alpha=0.5)
+        hist_axes[1].set_xlabel("漏失量")
+        hist_axes[1].set_title("漏失量 (直方图)")
+
+        # Histogram 3: 塑性黏度 - red
+        hist_axes[2].hist(df_section["塑性黏度"], bins=15, color="red", alpha=0.7)
+        hist_axes[2].grid(linestyle="--", alpha=0.5)
+        hist_axes[2].set_xlabel("塑性黏度")
+        hist_axes[2].set_title("塑性黏度 (直方图)")
+
+        # Histogram 4: 钻速 - purple
+        hist_axes[3].hist(df_section["钻速"], bins=15, color="purple", alpha=0.7)
+        hist_axes[3].grid(linestyle="--", alpha=0.5)
+        hist_axes[3].set_xlabel("钻速")
+        hist_axes[3].set_title("钻速 (直方图)")
+
+        # Histogram 5: 钻井液排量 - orange
+        hist_axes[4].hist(df_section["钻井液排量"], bins=15, color="orange", alpha=0.7)
+        hist_axes[4].grid(linestyle="--", alpha=0.5)
+        hist_axes[4].set_xlabel("钻井液排量")
+        hist_axes[4].set_title("钻井液排量 (直方图)")
+
+        # Histogram 6: 泵压 - cyan
+        hist_axes[5].hist(df_section["泵压"], bins=15, color="cyan", alpha=0.7)
+        hist_axes[5].grid(linestyle="--", alpha=0.5)
+        hist_axes[5].set_xlabel("泵压")
+        hist_axes[5].set_title("泵压 (直方图)")
+
+        # Histogram 7: 裂缝宽度 - magenta
+        hist_axes[6].hist(df_section["裂缝宽度"], bins=15, color="magenta", alpha=0.7)
+        hist_axes[6].grid(linestyle="--", alpha=0.5)
+        hist_axes[6].set_xlabel("裂缝宽度")
+        hist_axes[6].set_title("裂缝宽度 (直方图)")
+
+        plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=16)
         plt.tight_layout()
 
         output_dir = resource_path("img/data_distribution/")

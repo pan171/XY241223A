@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QMessageBox,
     QHBoxLayout,
+    QScrollArea,
 )
 from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
@@ -57,13 +58,28 @@ class CrackIdentificationPage(QWidget):
         self.status_label.setStyleSheet("font-size: 12px; padding: 2px;")
         self.layout.addWidget(self.status_label)
 
+        # Create a scroll area for the image
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMinimumHeight(300)  # Set minimum height
+
+        # Create a container widget for the image
+        self.image_container = QWidget()
+        self.image_layout = QVBoxLayout(self.image_container)
+
         self.image_label = QLabel("裂缝识别结果")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.image_label)
-        self.image_container = QVBoxLayout()
+        self.image_label.setMinimumSize(
+            580, 280
+        )  # Set minimum size for the image label
+        self.image_layout.addWidget(self.image_label)
+
+        self.scroll_area.setWidget(self.image_container)
+        self.layout.addWidget(self.scroll_area)
 
         self.setLayout(self.layout)
         self.current_file_path = None
+        self.setMinimumSize(600, 600)  # Set minimum window size
 
         self.download_btn = QPushButton("下载图片")
         self.download_btn.clicked.connect(self.download_image)

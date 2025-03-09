@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QMessageBox,
     QHBoxLayout,
+    QScrollArea,
 )
 from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
@@ -126,12 +127,24 @@ class ParameterAnalysis(QWidget):
         self.status_label.setStyleSheet("font-size: 12px; padding: 2px;")
         self.layout.addWidget(self.status_label)
 
+        # Create a scroll area for the image
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMinimumHeight(300)  # Set minimum height
+
+        # Create a container widget for the image
+        self.image_container = QWidget()
+        self.image_layout = QVBoxLayout(self.image_container)
+
         self.image_label = QLabel("裂缝通道参数直方图绘制结果")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.image_label)
-        self.image_container = QVBoxLayout()
+        self.image_label.setMinimumSize(
+            580, 280
+        )  # Set minimum size for the image label
+        self.image_layout.addWidget(self.image_label)
 
-        self.setLayout(self.layout)
+        self.scroll_area.setWidget(self.image_container)
+        self.layout.addWidget(self.scroll_area)
 
         self.current_file_path = None
 
@@ -139,7 +152,8 @@ class ParameterAnalysis(QWidget):
         self.download_btn.clicked.connect(self.download_image)
         self.layout.addWidget(self.download_btn)
 
-        self.setGeometry(100, 100, 600, 400)
+        self.setLayout(self.layout)
+        self.setMinimumSize(600, 600)  # Set minimum window size
 
     def upload_file(self):
         file_path, _ = QFileDialog.getOpenFileName(

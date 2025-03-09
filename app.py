@@ -1,4 +1,5 @@
 import sys
+import os
 import traceback
 
 from PyQt5.QtWidgets import (
@@ -20,9 +21,14 @@ from pages.config import resource_path, clean_img_folder
 from pages.data_processing_page import DataProcessingPage
 from pages.crack_identification_page import CrackIdentificationPage
 from pages.parameter_calculation_page import ParameterCalculationPage
+from pages.parameter_analysis_page import ParameterAnalysis
 from pages.comprehensive_outcome_page import ComprehensiveOutcomePage
 from pages.distribution_page import DistributionPage
 from pages.hydrodynamic_page import HydrodynamicPage
+from pages.bp_page import BPPage
+from pages.FDCNN_page import FDCNNPage
+
+os.environ["QT_MAC_WANTS_LAYER"] = "1"
 
 
 class MainWindow(QMainWindow):
@@ -66,6 +72,9 @@ class MainWindow(QMainWindow):
         self.add_group_page(
             logging_buttons_layout, "裂缝通道参数计算", ParameterCalculationPage()
         )
+
+        # Add new page for crack analysis
+        self.add_group_page(logging_buttons_layout, "裂缝参数分析", ParameterAnalysis())
         logging_layout.addLayout(logging_buttons_layout)
         logging_group.setLayout(logging_layout)
 
@@ -78,12 +87,8 @@ class MainWindow(QMainWindow):
         self.add_group_page(
             mud_logging_buttons_layout1, "流体力学模型", HydrodynamicPage()
         )
-        self.add_group_page(
-            mud_logging_buttons_layout1, "BP神经网络模型", QLabel("BP神经网络页面")
-        )
-        self.add_group_page(
-            mud_logging_buttons_layout2, "FDCNN模型", QLabel("FDCNN页面")
-        )
+        self.add_group_page(mud_logging_buttons_layout1, "BP神经网络模型", BPPage())
+        self.add_group_page(mud_logging_buttons_layout2, "FDCNN模型", FDCNNPage())
         self.add_group_page(
             mud_logging_buttons_layout2, "录井数据分布", DistributionPage()
         )
@@ -98,6 +103,10 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(logging_group)
         self.layout.addWidget(mud_logging_group)
         self.layout.addWidget(self.pages)
+
+    def show_fullscreen(self):
+        """Show the main window in fullscreen mode"""
+        self.showFullScreen()
 
     def add_page(self, name, widget):
         btn = QPushButton(name)

@@ -74,6 +74,10 @@ class ParameterCalculationPage(QWidget):
         comb_1.addWidget(self.r_mf_label)
         comb_1.addWidget(self.r_mf_input)
 
+        self.fmi_upload_btn = QPushButton("上传 FMI")
+        self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
+        comb_1.addWidget(self.fmi_upload_btn)
+
         self.layout.addLayout(comb_1)
         ################################################
 
@@ -150,6 +154,21 @@ class ParameterCalculationPage(QWidget):
             GlobalData.df = df.copy()
             GlobalData.filtered_df = df.copy()
             self.status_label.setText("上传文件成功！")
+
+    def upload_fmi_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择 FMI 图片", "", "图片文件 (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if file_path:
+            output_dir = resource_path("img/")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, "fmi_example.png")
+            try:
+                with open(file_path, "rb") as src, open(output_path, "wb") as dst:
+                    dst.write(src.read())
+                QMessageBox.information(self, "成功", "FMI 图片上传成功！")
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"图片上传失败: {str(e)}")
 
     def download_image(self):
         if not hasattr(self, "image_label") or self.image_label.pixmap() is None:
@@ -263,7 +282,7 @@ class ParameterCalculationPage(QWidget):
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
 
-        _, axes = plt.subplots(nrows=1, ncols=7, figsize=(20, 10), sharey=True)
+        _, axes = plt.subplots(nrows=1, ncols=10, figsize=(29, 10), sharey=True)
         for ax in axes:
             ax.set_ylim(bottom=max(df_section["Depth"]), top=min(df_section["Depth"]))
 
@@ -340,21 +359,51 @@ class ParameterCalculationPage(QWidget):
         axes[5].set_title("FVA & FVPA")
         axes[5].legend()
 
-        # fig7: FVDC & FG —— cyan & magenta (改为曲线填充)
+        # fig7: FVDC
         axes[6].plot(
             df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
         )
         axes[6].fill_betweenx(
             df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
         )
-        axes[6].plot(df_section["FG"], df_section["Depth"], color="magenta", label="FG")
-        axes[6].fill_betweenx(
-            df_section["Depth"], df_section["FG"], color="magenta", alpha=0.5
-        )
         axes[6].grid(linestyle="--", alpha=0.5)
-        axes[6].set_xlabel("FVDC - FG")
-        axes[6].set_title("FVDC & FG")
+        axes[6].set_xlabel("FVDC")
+        axes[6].set_title("FVDC")
         axes[6].legend()
+
+        # fig8: Kf
+        axes[7].plot(df_section["Kf"], df_section["Depth"], color="magenta", label="Kf")
+        axes[7].fill_betweenx(
+            df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
+        )
+        axes[7].grid(linestyle="--", alpha=0.5)
+        axes[7].set_xlabel("Kf")
+        axes[7].set_title("Kf")
+        axes[7].legend()
+
+        # fig9: padding
+        axes[8].plot(
+            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+        )
+        axes[8].fill_betweenx(
+            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        )
+        axes[8].grid(linestyle="--", alpha=0.5)
+        axes[8].set_xlabel("FVDC")
+        axes[8].set_title("Padding")
+        axes[8].legend()
+
+        # fig10:FMI image
+        fmi_image_path = resource_path("data/example.jpg")  # 确保图片路径正确
+        if os.path.exists(fmi_image_path):
+            fmi_img = plt.imread(fmi_image_path)
+            axes[9].imshow(
+                fmi_img,
+                aspect="auto",
+                extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
+            )
+        axes[9].set_title("FMI")
+        axes[9].axis("off")  # 不显示坐标轴
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()

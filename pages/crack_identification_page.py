@@ -123,18 +123,18 @@ class CrackIdentificationPage(QWidget):
             self.status_label.setText("❌ 数据为空，请上传或加载数据。")
             return None
 
-        required_columns = ["Depth", "RLLD", "RLLS"]
+        required_columns = ["Depth", "RLLD", "RLLS", "CALI"]
         if not all(col in df.columns for col in required_columns):
             QMessageBox.critical(
                 self, "错误", f"输入文件必须包含列: {required_columns}"
             )
             return None
 
-        df["RLLD/RLLS"] = df["RLLD"] / df["RLLS"]
+        df["Y"] = (df["RLLD"] - df["RLLS"]) / (df["RLLD"] * df["RLLS"]) ** 0.5
         conditions = [
-            df["RLLD/RLLS"] > 1.3,
-            (df["RLLD/RLLS"] >= 0.8) & (df["RLLD/RLLS"] <= 1.3),
-            df["RLLD/RLLS"] < 0.8,
+            df["Y"] > 0.1,
+            (df["Y"] > 0) & (df["Y"] <= 0.1),
+            df["Y"] <= 0,
         ]
         choices = [3, 2, 1]
         df["Explanation"] = np.select(conditions, choices, default=0)
@@ -160,10 +160,10 @@ class CrackIdentificationPage(QWidget):
         axes[1].set_xlabel("RLLS (Ω·m)")
         axes[1].set_title("RLLS")
 
-        axes[2].plot(df_section["RLLD/RLLS"], df_section["Depth"], color="red")
+        axes[2].plot(df_section["Y"], df_section["Depth"], color="red")
         axes[2].grid(linestyle="--", alpha=0.5)
-        axes[2].set_xlabel("RLLD/RLLS")
-        axes[2].set_title("RLLD/RLLS")
+        axes[2].set_xlabel("Y")
+        axes[2].set_title("Y")
 
         axes[3].step(
             df_section["Explanation"],

@@ -22,7 +22,7 @@ class LoginWindow(QWidget):
 
     def initUI(self):
         self.setWindowTitle("裂缝通道评价系统")
-        self.setFixedSize(900, 600)
+        self.resize(900, 600)
 
         # 使用 QLabel 设置背景图片，并使其足够大（按比例填充整个窗口）
         self.bg_label = QLabel(self)
@@ -55,8 +55,8 @@ class LoginWindow(QWidget):
         self.pwd_input.setPlaceholderText("密码")
         self.pwd_input.setEchoMode(QLineEdit.Password)
 
-        self.user_input.setFixedHeight(30)
-        self.pwd_input.setFixedHeight(30)
+        self.user_input.setMinimumHeight(30)
+        self.pwd_input.setMinimumHeight(30)
 
         login_btn = QPushButton("进入")
         login_btn.setStyleSheet(
@@ -70,25 +70,49 @@ class LoginWindow(QWidget):
         )
         register_btn.clicked.connect(self.open_register)
 
-        self.user_input.setFixedWidth(self.width() // 3)
-        self.pwd_input.setFixedWidth(self.width() // 3)
-        login_btn.setFixedWidth(self.width() // 3)
-        register_btn.setFixedWidth(self.width() // 3)
+        # Use a percentage of width instead of fixed width
+        input_width = min(400, self.width() // 3)
 
-        layout.addWidget(title)
-        layout.addWidget(self.user_input)
-        layout.addWidget(self.pwd_input)
-        layout.addWidget(login_btn)
-        layout.addWidget(register_btn)
+        # Create a container widget for the form elements to center them properly
+        form_container = QWidget()
+        form_layout = QVBoxLayout(form_container)
+        form_layout.setAlignment(Qt.AlignCenter)
 
+        self.user_input.setMinimumWidth(input_width)
+        self.pwd_input.setMinimumWidth(input_width)
+        login_btn.setMinimumWidth(input_width)
+        register_btn.setMinimumWidth(input_width)
+
+        # Maximum width to maintain good readability on large screens
+        self.user_input.setMaximumWidth(400)
+        self.pwd_input.setMaximumWidth(400)
+        login_btn.setMaximumWidth(400)
+        register_btn.setMaximumWidth(400)
+
+        form_layout.addWidget(title)
+        form_layout.addWidget(self.user_input)
+        form_layout.addWidget(self.pwd_input)
+        form_layout.addWidget(login_btn)
+        form_layout.addWidget(register_btn)
+
+        layout.addWidget(form_container)
         self.setLayout(layout)
+
+    def resizeEvent(self, event):
+        # Update background image when window is resized
+        self.bg_label.setGeometry(0, 0, self.width(), self.height())
+        pixmap = QPixmap(resource_path("data/login.png")).scaled(
+            self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+        )
+        self.bg_label.setPixmap(pixmap)
+        super().resizeEvent(event)
 
     def open_main(self):
         username = self.user_input.text()
         password = self.pwd_input.text()
 
         if username in user_data and user_data[username] == password:
-            self.main_window.showFullScreen()
+            self.main_window.showMaximized()  # Use maximized instead of fullscreen for better compatibility
             self.close()
         else:
             QMessageBox.warning(self, "登录失败", "用户名或密码错误")
@@ -105,9 +129,9 @@ class RegisterWindow(QWidget):
 
     def initUI(self):
         self.setWindowTitle("裂缝通道评价系统")
-        self.setFixedSize(900, 600)
+        self.resize(900, 600)
 
-        # 在 RegisterWindow.initUI() 的开头（在设置布局之前）添加以下代码：
+        # 添加背景图片
         self.bg_label = QLabel(self)
         self.bg_label.setGeometry(0, 0, self.width(), self.height())
         pixmap = QPixmap(resource_path("data/login.png")).scaled(
@@ -125,6 +149,11 @@ class RegisterWindow(QWidget):
         layout.setSpacing(15)
         layout.setAlignment(Qt.AlignCenter)
 
+        # Create a container widget for the form elements
+        form_container = QWidget()
+        form_layout = QVBoxLayout(form_container)
+        form_layout.setAlignment(Qt.AlignCenter)
+
         title = QLabel("用户注册", self)
         title.setFont(QFont("Arial", 20))
         title.setAlignment(Qt.AlignCenter)
@@ -141,9 +170,21 @@ class RegisterWindow(QWidget):
         self.confirm_pwd_input.setPlaceholderText("确认密码")
         self.confirm_pwd_input.setEchoMode(QLineEdit.Password)
 
-        self.new_user_input.setFixedHeight(30)
-        self.new_pwd_input.setFixedHeight(30)
-        self.confirm_pwd_input.setFixedHeight(30)
+        self.new_user_input.setMinimumHeight(30)
+        self.new_pwd_input.setMinimumHeight(30)
+        self.confirm_pwd_input.setMinimumHeight(30)
+
+        # Use percentage of width instead of fixed width
+        input_width = min(400, self.width() // 3)
+
+        self.new_user_input.setMinimumWidth(input_width)
+        self.new_pwd_input.setMinimumWidth(input_width)
+        self.confirm_pwd_input.setMinimumWidth(input_width)
+
+        # Maximum width for good readability
+        self.new_user_input.setMaximumWidth(400)
+        self.new_pwd_input.setMaximumWidth(400)
+        self.confirm_pwd_input.setMaximumWidth(400)
 
         register_btn = QPushButton("注册")
         register_btn.setStyleSheet(
@@ -151,17 +192,13 @@ class RegisterWindow(QWidget):
         )
         register_btn.clicked.connect(self.register_user)
 
-        self.new_user_input.setFixedWidth(self.width() // 3)
-        self.new_pwd_input.setFixedWidth(self.width() // 3)
-        self.confirm_pwd_input.setFixedWidth(self.width() // 3)
-        register_btn.setFixedWidth(self.width() // 3)
+        form_layout.addWidget(title)
+        form_layout.addWidget(self.new_user_input)
+        form_layout.addWidget(self.new_pwd_input)
+        form_layout.addWidget(self.confirm_pwd_input)
+        form_layout.addWidget(register_btn)
 
-        layout.addWidget(title)
-        layout.addWidget(self.new_user_input)
-        layout.addWidget(self.new_pwd_input)
-        layout.addWidget(self.confirm_pwd_input)
-        layout.addWidget(register_btn)
-
+        layout.addWidget(form_container)
         self.setLayout(layout)
 
     def register_user(self):

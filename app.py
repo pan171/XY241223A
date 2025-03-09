@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QStackedWidget,
     QHBoxLayout,
     QGroupBox,
+    QSizePolicy,
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
@@ -35,12 +36,14 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("裂缝通道评价系统")
-        self.setGeometry(100, 100, 900, 600)
+        self.setGeometry(100, 100, 1200, 800)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
         self.layout = QVBoxLayout(self.central_widget)
+        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.setSpacing(10)
 
         self.nav_buttons = QWidget()
         self.nav_layout = QHBoxLayout(self.nav_buttons)
@@ -48,12 +51,16 @@ class MainWindow(QMainWindow):
         self.nav_layout.setContentsMargins(5, 5, 5, 5)
 
         self.pages = QStackedWidget()
+        self.pages.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.pages_map = {}
 
         # Home Page
         home_page = QLabel()
-        home_page.setPixmap(QPixmap(resource_path("data/homepage.png")))
-        home_page.setScaledContents(True)
+        pixmap = QPixmap(resource_path("data/homepage.png"))
+        home_page.setPixmap(pixmap)
+        home_page.setAlignment(Qt.AlignCenter)
+        home_page.setScaledContents(False)
+        home_page.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.add_page("主页", home_page)
 
         # Data Processing Page
@@ -104,14 +111,10 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(mud_logging_group)
         self.layout.addWidget(self.pages)
 
-    def show_fullscreen(self):
-        """Show the main window in fullscreen mode"""
-        self.showFullScreen()
-
     def add_page(self, name, widget):
         btn = QPushButton(name)
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setFixedHeight(30)
+        btn.setMinimumHeight(30)
         btn.setStyleSheet("""
             QPushButton {
                 background-color: #0056b3;
@@ -138,7 +141,7 @@ class MainWindow(QMainWindow):
     def add_group_page(self, layout, name, widget):
         btn = QPushButton(name)
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setFixedHeight(30)
+        btn.setMinimumHeight(30)
         btn.setStyleSheet("""
             QPushButton {
                 background-color: #006400;
@@ -161,6 +164,9 @@ class MainWindow(QMainWindow):
 
         self.pages_map[name] = widget
         self.pages.addWidget(widget)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
 
 
 def excepthook(exc_type, exc_value, exc_traceback):

@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         )
 
         # Add new page for crack analysis
-        self.add_group_page(logging_buttons_layout, "裂缝参数分析", ParameterAnalysis())
+        self.add_group_page(logging_buttons_layout, "分析", ParameterAnalysis())
         logging_layout.addLayout(logging_buttons_layout)
         logging_group.setLayout(logging_layout)
 

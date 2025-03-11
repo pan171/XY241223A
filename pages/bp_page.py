@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QRadioButton,
     QButtonGroup,
+    QGridLayout,
 )
 import numpy as np
 import pandas as pd
@@ -112,7 +113,7 @@ class BPPage(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Parameters Group
+        # Parameters Group with two columns
         params_group = QGroupBox("BP Neural Network Parameters")
         params_group.setStyleSheet("""
             QGroupBox {
@@ -131,9 +132,14 @@ class BPPage(QWidget):
             }
         """)
 
-        params_layout = QVBoxLayout(params_group)
-        params_layout.setContentsMargins(15, 10, 15, 10)
-        params_layout.setSpacing(8)
+        # Create a horizontal layout for the two columns
+        params_horizontal_layout = QHBoxLayout(params_group)
+        params_horizontal_layout.setContentsMargins(15, 10, 15, 10)
+        params_horizontal_layout.setSpacing(15)
+
+        # Left column - Training parameters
+        left_column = QVBoxLayout()
+        left_column.setSpacing(8)
 
         # Default values
         default_values = {
@@ -178,7 +184,7 @@ class BPPage(QWidget):
             row.addStretch()
 
             self.inputs[param] = input_field
-            params_layout.addWidget(frame)
+            left_column.addWidget(frame)
 
         # Constraints option (checkbox)
         constraint_frame = QFrame()
@@ -208,8 +214,7 @@ class BPPage(QWidget):
         constraint_layout.addWidget(self.no_radio)
         constraint_layout.addStretch()
 
-        params_layout.addWidget(constraint_frame)
-        params_layout.addStretch()
+        left_column.addWidget(constraint_frame)
 
         # Data Upload and Buttons
         data_panel = QFrame()
@@ -285,7 +290,136 @@ class BPPage(QWidget):
         data_layout.addWidget(self.save_plot_btn)
         data_layout.addWidget(self.data_status, 1)
 
-        params_layout.addWidget(data_panel)
+        left_column.addWidget(data_panel)
+        left_column.addStretch()
+
+        # Right column - Inference section
+        right_column = QVBoxLayout()
+        right_column.setSpacing(8)
+
+        # Inference Group
+        inference_group = QGroupBox("Inference")
+        inference_group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #2ecc71;
+                border-radius: 8px;
+                margin-top: 5px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #27ae60;
+            }
+        """)
+
+        inference_layout = QVBoxLayout(inference_group)
+        inference_layout.setContentsMargins(10, 10, 10, 10)
+        inference_layout.setSpacing(8)
+
+        # Input fields for inference
+        inference_inputs = {
+            "well_depth": "井深",
+            "loss_rate": "漏失速度",
+            "loss_volume": "漏失量",
+            "plastic_viscosity": "塑性粘度",
+            "drilling_speed": "钻速",
+            "mud_flow": "钻井液排量",
+            "pump_pressure": "泵压",
+        }
+
+        self.inference_input_fields = {}
+
+        for key, label_text in inference_inputs.items():
+            frame = QFrame()
+            frame.setStyleSheet("background-color: white; border-radius: 5px;")
+            row = QHBoxLayout(frame)
+            row.setContentsMargins(8, 5, 8, 5)
+
+            label = QLabel(f"{label_text}: ")
+            label.setFixedWidth(
+                label_width - 30
+            )  # Slightly narrower for the right column
+            label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            label.setStyleSheet(font_style)
+
+            input_field = QLineEdit()
+            input_field.setFixedWidth(
+                input_width - 20
+            )  # Slightly narrower for the right column
+            input_field.setStyleSheet(
+                font_style + "padding: 5px; border: 1px solid #bdc3c7;"
+            )
+
+            row.addWidget(label)
+            row.addWidget(input_field)
+            row.addStretch()
+
+            self.inference_input_fields[key] = input_field
+            inference_layout.addWidget(frame)
+
+        # Predict button
+        predict_frame = QFrame()
+        predict_frame.setStyleSheet("background-color: white; border-radius: 5px;")
+        predict_layout = QHBoxLayout(predict_frame)
+        predict_layout.setContentsMargins(8, 5, 8, 5)
+
+        self.predict_btn = QPushButton("预测")
+        self.predict_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 14px;
+                font-weight: bold;
+                background-color: #3498db;
+                color: white;
+                padding: 6px 15px;
+                border-radius: 3px;
+                min-height: 30px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        self.predict_btn.clicked.connect(self.predict_fracture_width)
+
+        predict_layout.addStretch()
+        predict_layout.addWidget(self.predict_btn)
+        predict_layout.addStretch()
+
+        inference_layout.addWidget(predict_frame)
+
+        # Output field - Fracture width
+        output_frame = QFrame()
+        output_frame.setStyleSheet("background-color: white; border-radius: 5px;")
+        output_layout = QHBoxLayout(output_frame)
+        output_layout.setContentsMargins(8, 5, 8, 5)
+
+        output_label = QLabel("裂缝宽度: ")
+        output_label.setFixedWidth(label_width - 30)
+        output_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        output_label.setStyleSheet(font_style)
+
+        self.fracture_width_output = QLineEdit()
+        self.fracture_width_output.setFixedWidth(input_width - 20)
+        self.fracture_width_output.setStyleSheet(
+            font_style + "padding: 5px; border: 1px solid #bdc3c7;"
+        )
+
+        output_layout.addWidget(output_label)
+        output_layout.addWidget(self.fracture_width_output)
+        output_layout.addStretch()
+
+        inference_layout.addWidget(output_frame)
+        inference_layout.addStretch()
+
+        right_column.addWidget(inference_group)
+        right_column.addStretch()
+
+        # Add both columns to the horizontal layout
+        params_horizontal_layout.addLayout(left_column)
+        params_horizontal_layout.addLayout(right_column)
 
         # Add parameters group to main layout
         main_layout.addWidget(params_group)
@@ -760,3 +894,71 @@ class BPPage(QWidget):
                 margin: 0 10px;
             """)
             QMessageBox.critical(self, "Export Error", f"Error saving data: {str(e)}")
+
+    def predict_fracture_width(self):
+        """Predict fracture width based on input parameters"""
+        try:
+            # Get input values
+            well_depth = float(self.inference_input_fields["well_depth"].text() or 0)
+            loss_rate = float(self.inference_input_fields["loss_rate"].text() or 0)
+            loss_volume = float(self.inference_input_fields["loss_volume"].text() or 0)
+            plastic_viscosity = float(
+                self.inference_input_fields["plastic_viscosity"].text() or 0
+            )
+            drilling_speed = float(
+                self.inference_input_fields["drilling_speed"].text() or 0
+            )
+            mud_flow = float(self.inference_input_fields["mud_flow"].text() or 0)
+            pump_pressure = float(
+                self.inference_input_fields["pump_pressure"].text() or 0
+            )
+
+            # Simple mock calculation for demonstration
+            # In a real application, this would use the trained neural network model
+            mock_result = (
+                well_depth * 0.001
+                + loss_rate * 0.05
+                + loss_volume * 0.02
+                + plastic_viscosity * 0.1
+                + drilling_speed * 0.03
+                + mud_flow * 0.04
+                + pump_pressure * 0.001
+            )
+
+            # Format to 4 decimal places
+            result = f"{mock_result:.4f}"
+
+            # Display the result
+            self.fracture_width_output.setText(result)
+            self.fracture_width_output.setStyleSheet(
+                "font-size: 14px; padding: 5px; border: 1px solid #27ae60; color: #155724;"
+            )
+
+            self.status_label.setText("Status: Prediction completed successfully")
+            self.status_label.setStyleSheet("""
+                font-size: 12px;
+                padding: 4px;
+                min-height: 24px;
+                background-color: #d4edda;
+                color: #155724;
+                border-radius: 3px;
+                margin: 0 10px;
+            """)
+
+        except Exception as e:
+            self.status_label.setText(f"Status: Prediction failed - {str(e)}")
+            self.status_label.setStyleSheet("""
+                font-size: 12px;
+                padding: 4px;
+                min-height: 24px;
+                background-color: #f8d7da;
+                color: #721c24;
+                border-radius: 3px;
+                margin: 0 10px;
+            """)
+
+            QMessageBox.warning(
+                self,
+                "Prediction Error",
+                f"Error during prediction: {str(e)}\nPlease check your input values.",
+            )

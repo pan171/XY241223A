@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QSplitter,
     QLabel,
     QSizePolicy,
+    QLineEdit,
 )
 from PyQt5.QtCore import Qt
 from pages.style import CenterDelegate, CenteredComboBoxStyle
@@ -43,21 +44,27 @@ class PlotCanvas(FigureCanvas):
         self.axes.clear()
 
         if column is None and not original_df.empty:
-            # If no column specified, use the first numeric column
-            for col in original_df.columns:
+            # 从第二列开始寻找数值列
+            for col in original_df.columns[1:]:
                 if pd.api.types.is_numeric_dtype(original_df[col]):
                     column = col
                     break
 
         if column is not None:
-            x = np.arange(len(original_df))
-            self.axes.plot(x, original_df[column], "b-", label="原始数据")
-            self.axes.plot(x, filtered_df[column], "r-", label="处理后数据")
-            self.axes.set_title(f"数据对比 - {column}")
-            self.axes.set_xlabel("数据点")
-            self.axes.set_ylabel("值")
+            depth_col = original_df.columns[0]  # 假设第一列为深度列
+            # 交换坐标轴，深度作为Y轴
+            self.axes.plot(
+                original_df[column], original_df[depth_col], "b-", label="原始数据"
+            )
+            self.axes.plot(
+                filtered_df[column], filtered_df[depth_col], "r-", label="处理后数据"
+            )
+            self.axes.set_title(f"{column} vs {depth_col}")
+            self.axes.set_xlabel(column)
+            self.axes.set_ylabel(depth_col)
             self.axes.legend()
             self.axes.grid(True)
+            self.axes.invert_yaxis()  # 反转Y轴使深度向下增加
 
         self.fig.tight_layout()
         self.draw()
@@ -88,9 +95,35 @@ class DataProcessingPage(QWidget):
         self.upload_btn.clicked.connect(self.upload_file)
         left_layout.addWidget(self.upload_btn)
 
+        # Add depth range inputs
+        depth_layout = QHBoxLayout()
+
+        start_depth_label = QLabel("起始深度:")
+        self.start_depth_input = QLineEdit()
+        self.start_depth_input.setText("500")
+        depth_layout.addWidget(start_depth_label)
+        depth_layout.addWidget(self.start_depth_input)
+
+        end_depth_label = QLabel("结束深度:")
+        self.end_depth_input = QLineEdit()
+        self.end_depth_input.setText("1000")
+        depth_layout.addWidget(end_depth_label)
+        depth_layout.addWidget(self.end_depth_input)
+
+        left_layout.addLayout(depth_layout)
+
+        # Button layout
+        button_layout = QHBoxLayout()
+
         self.filter_btn = QPushButton("应用滤波算法处理")
         self.filter_btn.clicked.connect(self.apply_filter)
-        left_layout.addWidget(self.filter_btn)
+        button_layout.addWidget(self.filter_btn)
+
+        self.plot_btn = QPushButton("绘图")
+        self.plot_btn.clicked.connect(self.plot_data)
+        button_layout.addWidget(self.plot_btn)
+
+        left_layout.addLayout(button_layout)
 
         self.download_btn = QPushButton("下载处理后数据")
         self.download_btn.clicked.connect(self.download_filtered_data)
@@ -149,8 +182,9 @@ class DataProcessingPage(QWidget):
 
     def update_column_combo(self, df):
         self.column_combo.clear()
+        # 排除第一列（深度列），只显示后续的数值列
         numeric_columns = [
-            col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])
+            col for col in df.columns[1:] if pd.api.types.is_numeric_dtype(df[col])
         ]
         self.column_combo.addItems(numeric_columns)
         if numeric_columns:
@@ -200,10 +234,6 @@ class DataProcessingPage(QWidget):
 
                 GlobalData.filtered_df = df
                 self.display_table(df)
-
-                # Update plot with new filtered data
-                self.update_plot()
-
                 QMessageBox.information(
                     self, "成功", f"已成功应用{selected_filter}算法！"
                 )
@@ -211,6 +241,66 @@ class DataProcessingPage(QWidget):
                 QMessageBox.critical(self, "错误", f"数据处理失败: {str(e)}")
         else:
             QMessageBox.warning(self, "警告", "请先上传数据文件！")
+
+    def plot_data(self):
+        """Plot data based on depth range"""
+        if GlobalData.df is None or GlobalData.filtered_df is None:
+            QMessageBox.warning(self, "警告", "请先上传数据并处理！")
+            return
+
+        try:
+            start_depth = float(self.start_depth_input.text())
+            end_depth = float(self.end_depth_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "警告", "请输入有效的深度值！")
+            return
+
+        if start_depth >= end_depth:
+            QMessageBox.warning(self, "警告", "起始深度必须小于结束深度！")
+            return
+
+        column = self.column_combo.currentText()
+        if not column:
+            QMessageBox.warning(self, "警告", "请选择要绘制的数据列！")
+            return
+
+        try:
+            # 获取深度列（假设第一列为深度）
+            depth_column = GlobalData.df.columns[0]
+
+            # 筛选数据范围
+            mask = (GlobalData.df[depth_column] >= start_depth) & (
+                GlobalData.df[depth_column] <= end_depth
+            )
+            original_data = GlobalData.df[mask]
+            filtered_data = GlobalData.filtered_df[mask]
+
+            # 清除并重新绘制
+            self.plot_canvas.clear_plot()
+            # 交换坐标轴，参数值作为X轴，深度作为Y轴
+            self.plot_canvas.axes.plot(
+                original_data[column],
+                original_data[depth_column],
+                "b-",
+                label="原始数据",
+            )
+            self.plot_canvas.axes.plot(
+                filtered_data[column],
+                filtered_data[depth_column],
+                "r-",
+                label="处理后数据",
+            )
+            self.plot_canvas.axes.set_title(f"{column} vs {depth_column}")
+            self.plot_canvas.axes.set_xlabel(column)
+            self.plot_canvas.axes.set_ylabel(depth_column)
+            self.plot_canvas.axes.legend()
+            self.plot_canvas.axes.grid(True)
+            self.plot_canvas.axes.invert_yaxis()  # 反转Y轴
+            self.plot_canvas.fig.tight_layout()
+            self.plot_canvas.draw()
+
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"绘图失败: {str(e)}")
 
     def download_filtered_data(self):
         if GlobalData.filtered_df is not None:
@@ -222,14 +312,14 @@ class DataProcessingPage(QWidget):
                     # Save Excel data
                     GlobalData.filtered_df.to_excel(file_path, index=False)
 
-                    # Save plot as image
-                    figure_path = os.path.splitext(file_path)[0] + ".png"
+                    # 修改此处：将.png改为.pdf，并调整保存参数
+                    figure_path = os.path.splitext(file_path)[0] + ".pdf"
                     self.plot_canvas.fig.savefig(
-                        figure_path, dpi=300, bbox_inches="tight"
+                        figure_path, format="pdf", bbox_inches="tight"
                     )
 
                     QMessageBox.information(
-                        self, "成功", f"数据已成功保存！\n图像已保存为: {figure_path}"
+                        self, "成功", f"数据已成功保存！\n曲线图已保存为: {figure_path}"
                     )
                 except Exception as e:
                     QMessageBox.critical(self, "错误", f"保存文件失败: {str(e)}")

@@ -118,7 +118,7 @@ class DistributionPage(QWidget):
         if zip_path:
             with zipfile.ZipFile(zip_path, "w") as zipf:
                 image_path = resource_path(
-                    "img/data_distribution/data_distribution.png"
+                    "img/data_distribution/data_distribution.pdf"
                 )
                 zipf.write(image_path, os.path.basename(image_path))
 
@@ -280,7 +280,7 @@ class DistributionPage(QWidget):
 
         output_dir = resource_path("img/data_distribution/")
         os.makedirs(output_dir, exist_ok=True)
-        image_path = os.path.join(output_dir, "data_distribution.png")
+        image_path = os.path.join(output_dir, "data_distribution.pdf")
         plt.savefig(image_path, dpi=300, bbox_inches="tight")
         plt.close()
 

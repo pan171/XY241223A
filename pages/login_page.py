@@ -70,6 +70,13 @@ class LoginWindow(QWidget):
         )
         register_btn.clicked.connect(self.open_register)
 
+        # 添加游客访问按钮
+        guest_btn = QPushButton("游客访问")
+        guest_btn.setStyleSheet(
+            "background-color: #6C757D; color: white; padding: 5px; border-radius: 5px;"
+        )
+        guest_btn.clicked.connect(self.guest_access)
+
         # Use a percentage of width instead of fixed width
         input_width = min(400, self.width() // 3)
 
@@ -82,18 +89,21 @@ class LoginWindow(QWidget):
         self.pwd_input.setMinimumWidth(input_width)
         login_btn.setMinimumWidth(input_width)
         register_btn.setMinimumWidth(input_width)
+        guest_btn.setMinimumWidth(input_width)  # 设置游客按钮宽度
 
         # Maximum width to maintain good readability on large screens
         self.user_input.setMaximumWidth(400)
         self.pwd_input.setMaximumWidth(400)
         login_btn.setMaximumWidth(400)
         register_btn.setMaximumWidth(400)
+        guest_btn.setMaximumWidth(400)  # 设置游客按钮最大宽度
 
         form_layout.addWidget(title)
         form_layout.addWidget(self.user_input)
         form_layout.addWidget(self.pwd_input)
         form_layout.addWidget(login_btn)
         form_layout.addWidget(register_btn)
+        form_layout.addWidget(guest_btn)  # 添加游客按钮到布局
 
         layout.addWidget(form_container)
         self.setLayout(layout)
@@ -116,6 +126,11 @@ class LoginWindow(QWidget):
             self.close()
         else:
             QMessageBox.warning(self, "登录失败", "用户名或密码错误")
+
+    def guest_access(self):
+        # 游客直接进入主页面，无需验证
+        self.main_window.showMaximized()
+        self.close()
 
     def open_register(self):
         self.register_window = RegisterWindow()

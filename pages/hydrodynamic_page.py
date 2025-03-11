@@ -199,9 +199,16 @@ class HydrodynamicPage(QWidget):
         output_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         output_label.setStyleSheet(font_style)
 
-        self.lg_output_label = QLabel("-")
+        self.lg_output_label = QLineEdit("-")
         self.lg_output_label.setStyleSheet(
-            font_style + "font-weight: bold; color: #16a085;"
+            font_style
+            + """
+            padding: 5px;
+            border: 1px solid #bdc3c7;
+            font-weight: bold;
+            color: #16a085;
+            background-color: #e8f4fc;
+            """
         )
         self.lg_output_label.setMinimumWidth(180)  # Ensure enough space for result
 
@@ -295,9 +302,16 @@ class HydrodynamicPage(QWidget):
         output_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         output_label.setStyleSheet(font_style)
 
-        self.verga_output_label = QLabel("-")
+        self.verga_output_label = QLineEdit("-")
         self.verga_output_label.setStyleSheet(
-            font_style + "font-weight: bold; color: #8e44ad;"
+            font_style
+            + """
+            padding: 5px;
+            border: 1px solid #bdc3c7;
+            font-weight: bold;
+            color: #8e44ad;
+            background-color: #f5eef8;
+            """
         )
         self.verga_output_label.setMinimumWidth(180)  # Ensure enough space for result
 

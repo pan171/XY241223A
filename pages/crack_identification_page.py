@@ -118,7 +118,7 @@ class CrackIdentificationPage(QWidget):
                     "RLLD",
                     "RLLS",
                     "FPI",
-                    "解释结论",
+                    "识别结果",
                 ]
                 missing_columns = [
                     col for col in required_columns if col not in df.columns
@@ -204,7 +204,7 @@ class CrackIdentificationPage(QWidget):
                 "RLLD",
                 "RLLS",
                 "FPI",
-                "解释结论",
+                "识别结果",
             ]
             if not all(col in df.columns for col in required_columns):
                 QMessageBox.critical(
@@ -256,7 +256,7 @@ class CrackIdentificationPage(QWidget):
                 (df["FPI"] <= 0.2),  # 无裂缝发育
             ]
             choices = [3, 2, 1, 0]
-            df["解释结论"] = np.select(conditions, choices, default=0)
+            df["识别结果"] = np.select(conditions, choices, default=0)
 
             df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
 
@@ -306,7 +306,7 @@ class CrackIdentificationPage(QWidget):
         # 绘制解释结论（以颜色填充块的方式）
         # 首先创建一个带有深度和宽度的矩形数组
         depths = df_section["Depth"].values
-        explanations = df_section["解释结论"].values
+        explanations = df_section["识别结果"].values
 
         # 定义颜色映射
         colors = {0: "white", 1: "green", 2: "blue", 3: "yellow"}
@@ -324,8 +324,8 @@ class CrackIdentificationPage(QWidget):
         axes[6].set_xlim(0, 3)
         axes[6].set_xticks([0, 1, 2, 3])
         axes[6].set_xticklabels(["无", "低", "中", "高"])
-        axes[6].set_xlabel("解释结论")
-        axes[6].set_title("解释结论")
+        axes[6].set_xlabel("识别结果")
+        axes[6].set_title("识别结果")
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()

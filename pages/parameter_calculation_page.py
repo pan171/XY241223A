@@ -52,14 +52,14 @@ class ParameterCalculationPage(QWidget):
 
         # parameters: start, end
         self.start_depth_label = QLabel("start_depth: ")
-        self.start_depth_input = QLineEdit("500")
+        self.start_depth_input = QLineEdit("3500")
         self.start_depth_input.setPlaceholderText("起始深度")
         # self.start_depth_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         comb_1.addWidget(self.start_depth_label)
         comb_1.addWidget(self.start_depth_input)
 
         self.end_depth_label = QLabel("end_depth: ")
-        self.end_depth_input = QLineEdit("1000")
+        self.end_depth_input = QLineEdit("4000")
         self.end_depth_input.setPlaceholderText("结束深度")
         # self.end_depth_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         comb_1.addWidget(self.end_depth_label)
@@ -411,15 +411,21 @@ class ParameterCalculationPage(QWidget):
             for start_depth, end_depth, litho in lithology_layers:
                 if litho in lithology_patterns:
                     pattern = lithology_patterns[litho]
+                    # 增加 hatch 的密度，通过重复 pattern 字符
+                    dense_hatch = pattern["hatch"] * 3  # 重复3次增加密度
+
+                    # 绘制填充
                     axes[0].fill_betweenx(
                         [start_depth, end_depth],
                         0,
                         1,
                         color=pattern["color"],
-                        hatch=pattern["hatch"],
-                        alpha=0.7,
-                        linewidth=0,
+                        hatch=dense_hatch,
+                        alpha=0.5,  # 降低填充色的透明度使 hatch 更明显
+                        linewidth=0.5,  # 添加轮廓线
+                        edgecolor="black",  # 添加黑色边框
                     )
+
                     # Add black line between layers
                     axes[0].axhline(y=end_depth, color="black", linewidth=0.5)
 
@@ -430,9 +436,11 @@ class ParameterCalculationPage(QWidget):
                         legend_elements.append(
                             Patch(
                                 facecolor=pattern["color"],
-                                hatch=pattern["hatch"],
+                                hatch=dense_hatch,
                                 label=pattern["label"],
-                                alpha=0.7,
+                                alpha=0.5,
+                                linewidth=0.5,
+                                edgecolor="black",
                             )
                         )
 
@@ -657,15 +665,21 @@ class ParameterCalculationPage(QWidget):
         for start_depth, end_depth, litho in lithology_layers:
             if litho in lithology_patterns:
                 pattern = lithology_patterns[litho]
+                # 增加 hatch 的密度，通过重复 pattern 字符
+                dense_hatch = pattern["hatch"] * 3  # 重复3次增加密度
+
+                # 绘制填充
                 axes[0].fill_betweenx(
                     [start_depth, end_depth],
                     0,
                     1,
                     color=pattern["color"],
-                    hatch=pattern["hatch"],
-                    alpha=0.7,
-                    linewidth=0,
+                    hatch=dense_hatch,
+                    alpha=0.5,  # 降低填充色的透明度使 hatch 更明显
+                    linewidth=0.5,  # 添加轮廓线
+                    edgecolor="black",  # 添加黑色边框
                 )
+
                 # Add black line between layers
                 axes[0].axhline(y=end_depth, color="black", linewidth=0.5)
 
@@ -676,9 +690,11 @@ class ParameterCalculationPage(QWidget):
                     legend_elements.append(
                         Patch(
                             facecolor=pattern["color"],
-                            hatch=pattern["hatch"],
+                            hatch=dense_hatch,
                             label=pattern["label"],
-                            alpha=0.7,
+                            alpha=0.5,
+                            linewidth=0.5,
+                            edgecolor="black",
                         )
                     )
 

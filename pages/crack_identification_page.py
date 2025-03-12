@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-from PIL import Image
 import shutil
 
 from pages.config import GlobalData, resource_path

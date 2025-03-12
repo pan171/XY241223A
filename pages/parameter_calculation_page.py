@@ -23,6 +23,7 @@ class ParameterCalculationPage(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.upload_mode = "standard"  # Flag to track which upload button was used
 
     def initUI(self):
         self.layout = QVBoxLayout()
@@ -31,8 +32,13 @@ class ParameterCalculationPage(QWidget):
         upload_buttons_layout = QHBoxLayout()
 
         self.upload_btn = QPushButton("上传 Excel 文件")
-        self.upload_btn.clicked.connect(self.upload_file)
+        self.upload_btn.clicked.connect(lambda: self.upload_file("standard"))
         upload_buttons_layout.addWidget(self.upload_btn)
+
+        # Add new Upload button
+        self.new_upload_btn = QPushButton("Upload")
+        self.new_upload_btn.clicked.connect(lambda: self.upload_file("advanced"))
+        upload_buttons_layout.addWidget(self.new_upload_btn)
 
         self.fmi_upload_btn = QPushButton("上传 FMI")
         self.fmi_upload_btn.clicked.connect(self.upload_fmi_image)
@@ -162,11 +168,12 @@ class ParameterCalculationPage(QWidget):
         self.setLayout(self.layout)
         self.setMinimumSize(600, 600)  # Set minimum window size
 
-    def upload_file(self):
+    def upload_file(self, mode="standard"):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "选择 Excel 文件", "", "Excel 文件 (*.xlsx *.xls)"
         )
         if file_path:
+            self.upload_mode = mode
             self.current_file_path = file_path
             df = pd.read_excel(file_path)
             GlobalData.df = df.copy()
@@ -196,18 +203,32 @@ class ParameterCalculationPage(QWidget):
             return
 
         pdf_path, _ = QFileDialog.getSaveFileName(
-            self, "保存PDF文件", "parameter_calculation.pdf", "PDF 文件 (*.pdf)"
+            self, "保存PDF文件", "", "PDF 文件 (*.pdf)"
         )
         if pdf_path:
-            # Save the current figure directly as PDF
-            plt.figure(figsize=(32, 10))
-            pdf_path = resource_path(
-                "img/parameter_calculation/parameter_calculation.png"
-            )
-            plt.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
-            plt.close()
+            try:
+                # Get the source image path
+                source_image_path = resource_path(
+                    "img/parameter_calculation/parameter_calculation.png"
+                )
 
-            QMessageBox.information(self, "成功", f"图片已成功保存为PDF：\n{pdf_path}")
+                # Create a new figure with the same size as the original plot
+                plt.figure(figsize=(32, 10))
+
+                # Read and display the image
+                img = plt.imread(source_image_path)
+                plt.imshow(img)
+                plt.axis("off")  # Hide axes
+
+                # Save as PDF
+                plt.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
+                plt.close()
+
+                QMessageBox.information(
+                    self, "成功", f"图片已成功保存为PDF：\n{pdf_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
 
     def run_parameter_calculation(self):
         QApplication.processEvents()
@@ -274,30 +295,294 @@ class ParameterCalculationPage(QWidget):
             self.status_label.setText("❌ 数据为空，请上传或加载数据。")
             return None
 
-        required_columns = ["Depth", "AC", "DEN", "GR", "CNL", "RLLD", "RLLS"]
-        if not all(col in df.columns for col in required_columns):
-            QMessageBox.critical(
-                self, "错误", f"输入文件必须包含列: {required_columns}"
+        # Check if using advanced mode (Upload button)
+        if self.upload_mode == "advanced":
+            # Check for required columns in advanced mode
+            required_columns = [
+                "岩性道",
+                "AC",
+                "DEN",
+                "GR",
+                "CNL",
+                "RLLD",
+                "RLLS",
+                "FVA",
+                "FVPA",
+                "FVDC",
+                "Kf",
+                "解释结论",
+            ]
+            if not all(col in df.columns for col in required_columns):
+                QMessageBox.critical(
+                    self, "错误", f"该模式输入文件必须包含列: {required_columns}"
+                )
+                return None
+
+            # Plot with advanced visualization
+            return self.plot_advanced_parameter_log(df, start_depth, end_depth)
+        else:
+            # Standard plotting mode
+            required_columns = ["Depth", "AC", "DEN", "GR", "CNL", "RLLD", "RLLS"]
+            if not all(col in df.columns for col in required_columns):
+                QMessageBox.critical(
+                    self, "错误", f"输入文件必须包含列: {required_columns}"
+                )
+                return None
+
+            # Add default 岩性道 column if not present
+            if "岩性道" not in df.columns:
+                df["岩性道"] = 1  # Default to medium grain size
+                df["解释结论"] = 0  # Default interpretation result
+
+            # Calculate additional parameters
+            df["FVPA"] = (r_mf * ((1 / df["RLLS"]) - (1 / df["RLLD"]))) ** a
+            df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / (
+                (1 / r_mf) - (1 / r_w)
             )
-            return None
+            df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
+            df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
+            df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
 
-        # directly obtain
-        # x: Depth
-        # fig1: AC —— blue
-        # fig2: DEN —— green
-        # fig3: GR —— red
-        # fig4: CNL —— yellow
-        # fig5: RLLD & RLLS —— purple & orange
-        # calc
-        # fig6: FVA & FVPA —— black & brown
-        # fig7: FVDC & FG —— cyan & magenta
-        df["FVPA"] = (r_mf * ((1 / df["RLLS"]) - (1 / df["RLLD"]))) ** a
-        df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / ((1 / r_mf) - (1 / r_w))
-        df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
-        df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
-        df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
+            # Filter by depth range
+            df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
+            if df_section.empty:
+                QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
+                return None
 
-        df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
+            # Create figure with GridSpec to control subplot widths
+            _ = plt.figure(figsize=(32, 10))
+            gs = plt.GridSpec(1, 11, width_ratios=[0.25] + [1] * 10)
+            axes = [plt.subplot(gs[0, i]) for i in range(11)]
+
+            for ax in axes:
+                ax.set_ylim(
+                    bottom=max(df_section["Depth"]), top=min(df_section["Depth"])
+                )
+                # Hide ylabel and yticks for all axes except the first one
+                if ax != axes[0]:
+                    ax.set_ylabel("")
+                    ax.set_yticks([])
+
+            # 岩性 - Draw rock layers instead of markers
+            axes[0].set_xlabel("岩性")
+            axes[0].set_title("岩性")
+            axes[0].set_ylabel("Depth (m)")
+            axes[0].grid(False)
+
+            # Define patterns and colors for each lithology type
+            lithology_patterns = {
+                0: {
+                    "hatch": "...",
+                    "color": "saddlebrown",
+                    "label": "Coarse",
+                },  # Coarse - dark brown
+                1: {
+                    "hatch": "++",
+                    "color": "peru",
+                    "label": "Medium",
+                },  # Medium - medium brown
+                2: {
+                    "hatch": "--",
+                    "color": "burlywood",
+                    "label": "Fine",
+                },  # Fine - light brown
+            }
+
+            # Group by consecutive lithology values
+            df_section = df_section.copy()
+            df_section["岩性道"] = df_section["岩性道"].astype(float)
+
+            # Create a list to store layer information
+            lithology_layers = []
+            current_litho = None
+            layer_start = None
+
+            # Identify continuous layers
+            for _, row in df_section.sort_values("Depth").iterrows():
+                depth = row["Depth"]
+                litho = row["岩性道"] if pd.notna(row["岩性道"]) else None
+
+                if litho != current_litho:
+                    if current_litho is not None and layer_start is not None:
+                        lithology_layers.append((layer_start, depth, current_litho))
+                    current_litho = litho
+                    layer_start = depth
+
+            # Add the last layer
+            if current_litho is not None and layer_start is not None:
+                lithology_layers.append(
+                    (layer_start, max(df_section["Depth"]), current_litho)
+                )
+
+            # Draw the layers
+            legend_elements = []
+            for start_depth, end_depth, litho in lithology_layers:
+                if litho in lithology_patterns:
+                    pattern = lithology_patterns[litho]
+                    axes[0].fill_betweenx(
+                        [start_depth, end_depth],
+                        0,
+                        1,
+                        color=pattern["color"],
+                        hatch=pattern["hatch"],
+                        alpha=0.7,
+                        linewidth=0,
+                    )
+                    # Add black line between layers
+                    axes[0].axhline(y=end_depth, color="black", linewidth=0.5)
+
+                    # Add to legend (only once per lithology type)
+                    if pattern["label"] not in [e.get_label() for e in legend_elements]:
+                        from matplotlib.patches import Patch
+
+                        legend_elements.append(
+                            Patch(
+                                facecolor=pattern["color"],
+                                hatch=pattern["hatch"],
+                                label=pattern["label"],
+                                alpha=0.7,
+                            )
+                        )
+
+            # Add legend
+            axes[0].legend(
+                handles=legend_elements, loc="lower center", fontsize="small"
+            )
+            axes[0].set_xlim(0, 1)  # Set x-axis limits
+            axes[0].set_xticks([])  # Hide x-axis ticks
+
+            # Original subplots shifted one position to the right
+            # fig1: AC —— blue
+            axes[1].plot(df_section["AC"], df_section["Depth"], color="blue")
+            axes[1].grid(linestyle="--", alpha=0.5)
+            axes[1].set_xlabel("AC")
+            axes[1].set_title("AC")
+
+            # fig2: DEN —— green
+            axes[2].plot(df_section["DEN"], df_section["Depth"], color="green")
+            axes[2].grid(linestyle="--", alpha=0.5)
+            axes[2].set_xlabel("DEN")
+            axes[2].set_title("DEN")
+
+            # fig3: GR —— red
+            axes[3].plot(df_section["GR"], df_section["Depth"], color="red")
+            axes[3].grid(linestyle="--", alpha=0.5)
+            axes[3].set_xlabel("GR")
+            axes[3].set_title("GR")
+
+            # fig4: CNL —— yellow
+            axes[4].plot(df_section["CNL"], df_section["Depth"], color="yellow")
+            axes[4].grid(linestyle="--", alpha=0.5)
+            axes[4].set_xlabel("CNL")
+            axes[4].set_title("CNL")
+
+            # fig5: RLLD & RLLS —— purple & orange
+            axes[5].plot(
+                df_section["RLLD"], df_section["Depth"], color="purple", label="RLLD"
+            )
+            axes[5].plot(
+                df_section["RLLS"], df_section["Depth"], color="orange", label="RLLS"
+            )
+            axes[5].grid(linestyle="--", alpha=0.5)
+            axes[5].set_xlabel("RLLD - RLLS")
+            axes[5].set_title("RLLD & RLLS")
+            axes[5].legend()
+
+            # Rest of the subplots shifted one position
+            # Update indices for remaining plots (6 through 10)
+            axes[6].plot(
+                df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
+            )
+            axes[6].fill_betweenx(
+                df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
+            )
+            # Add FVA plot (only line, no fill)
+            axes[6].plot(
+                df_section["FVA"], df_section["Depth"], color="black", label="FVA"
+            )
+            axes[6].grid(linestyle="--", alpha=0.5)
+            axes[6].set_xlabel("FVA - FVPA")
+            axes[6].set_title("FVA & FVPA")
+            axes[6].legend()
+
+            axes[7].plot(
+                df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+            )
+            axes[7].fill_betweenx(
+                df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+            )
+            axes[7].grid(linestyle="--", alpha=0.5)
+            axes[7].set_xlabel("FVDC")
+            axes[7].set_title("FVDC")
+            axes[7].legend()
+
+            axes[8].plot(
+                df_section["Kf"], df_section["Depth"], color="magenta", label="Kf"
+            )
+            axes[8].fill_betweenx(
+                df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
+            )
+            axes[8].grid(linestyle="--", alpha=0.5)
+            axes[8].set_xlabel("Kf")
+            axes[8].set_title("Kf")
+            axes[8].legend()
+
+            axes[9].set_xlabel("解释结论")
+            axes[9].set_title("解释结论")
+            axes[9].grid(linestyle="--", alpha=0.5)
+
+            # Define color mapping
+            colors = {0: "white", 1: "green", 2: "blue", 3: "yellow"}
+
+            # Get depth and interpretation result values
+            depths = df_section["Depth"].values
+            results = df_section["解释结论"].values
+
+            # Plot lines for each interpretation result
+            for i in range(len(depths)):
+                result = results[i]
+                if pd.notna(result):
+                    result = int(result)  # Ensure it's an integer
+                    color = colors[result]  # 直接使用映射的颜色
+                    # Draw horizontal line at each depth
+                    axes[9].hlines(
+                        y=depths[i], xmin=0, xmax=1, color=color, linewidth=2
+                    )
+
+            # Set appropriate x-axis limits
+            axes[9].set_xlim(0, 1)
+
+            # FMI image
+            fmi_image_path = resource_path("data/example.jpg")
+            if os.path.exists(fmi_image_path):
+                fmi_img = plt.imread(fmi_image_path)
+                axes[10].imshow(
+                    fmi_img,
+                    aspect="auto",
+                    extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
+                )
+            axes[10].set_title("FMI")
+            axes[10].axis("off")
+
+            plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
+            plt.tight_layout()
+
+            output_dir = resource_path("img/parameter_calculation/")
+            os.makedirs(output_dir, exist_ok=True)
+            image_path = os.path.join(output_dir, "parameter_calculation.png")
+            plt.savefig(image_path, dpi=300, bbox_inches="tight")
+            plt.close()
+
+            return image_path
+
+    def plot_advanced_parameter_log(self, df, start_depth, end_depth):
+        """Plot parameter log with advanced visualization for "岩性道" and "解释结论" columns"""
+        # Filter by depth range
+        depth_col = (
+            "Depth" if "Depth" in df.columns else df.columns[0]
+        )  # Assume first column is depth if not named "Depth"
+        df_section = df[(df[depth_col] >= start_depth) & (df[depth_col] < end_depth)]
+
         if df_section.empty:
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
@@ -308,103 +593,196 @@ class ParameterCalculationPage(QWidget):
         axes = [plt.subplot(gs[0, i]) for i in range(11)]
 
         for ax in axes:
-            ax.set_ylim(bottom=max(df_section["Depth"]), top=min(df_section["Depth"]))
+            ax.set_ylim(
+                bottom=max(df_section[depth_col]), top=min(df_section[depth_col])
+            )
             # Hide ylabel and yticks for all axes except the first one
             if ax != axes[0]:
                 ax.set_ylabel("")
                 ax.set_yticks([])
 
-        # 岩性
+        # 岩性 - Draw rock layers instead of markers
         axes[0].set_xlabel("岩性")
         axes[0].set_title("岩性")
         axes[0].set_ylabel("Depth (m)")
         axes[0].grid(False)
+
+        # Define patterns and colors for each lithology type
+        lithology_patterns = {
+            0: {
+                "hatch": "...",
+                "color": "saddlebrown",
+                "label": "Coarse",
+            },  # Coarse - dark brown
+            1: {
+                "hatch": "++",
+                "color": "peru",
+                "label": "Medium",
+            },  # Medium - medium brown
+            2: {
+                "hatch": "--",
+                "color": "burlywood",
+                "label": "Fine",
+            },  # Fine - light brown
+        }
+
+        # Group by consecutive lithology values
+        df_section = df_section.copy()
+        df_section["岩性道"] = df_section["岩性道"].astype(float)
+
+        # Create a list to store layer information
+        lithology_layers = []
+        current_litho = None
+        layer_start = None
+
+        # Identify continuous layers
+        for _, row in df_section.sort_values(depth_col).iterrows():
+            depth = row[depth_col]
+            litho = row["岩性道"] if pd.notna(row["岩性道"]) else None
+
+            if litho != current_litho:
+                if current_litho is not None and layer_start is not None:
+                    lithology_layers.append((layer_start, depth, current_litho))
+                current_litho = litho
+                layer_start = depth
+
+        # Add the last layer
+        if current_litho is not None and layer_start is not None:
+            lithology_layers.append(
+                (layer_start, max(df_section[depth_col]), current_litho)
+            )
+
+        # Draw the layers
+        legend_elements = []
+        for start_depth, end_depth, litho in lithology_layers:
+            if litho in lithology_patterns:
+                pattern = lithology_patterns[litho]
+                axes[0].fill_betweenx(
+                    [start_depth, end_depth],
+                    0,
+                    1,
+                    color=pattern["color"],
+                    hatch=pattern["hatch"],
+                    alpha=0.7,
+                    linewidth=0,
+                )
+                # Add black line between layers
+                axes[0].axhline(y=end_depth, color="black", linewidth=0.5)
+
+                # Add to legend (only once per lithology type)
+                if pattern["label"] not in [e.get_label() for e in legend_elements]:
+                    from matplotlib.patches import Patch
+
+                    legend_elements.append(
+                        Patch(
+                            facecolor=pattern["color"],
+                            hatch=pattern["hatch"],
+                            label=pattern["label"],
+                            alpha=0.7,
+                        )
+                    )
+
+        # Add legend
+        axes[0].legend(handles=legend_elements, loc="lower center", fontsize="small")
+        axes[0].set_xlim(0, 1)  # Set x-axis limits
         axes[0].set_xticks([])  # Hide x-axis ticks
 
-        # Original subplots shifted one position to the right
-        # fig1: AC —— blue
-        axes[1].plot(df_section["AC"], df_section["Depth"], color="blue")
+        # Standard curve plots (AC, DEN, GR, CNL)
+        axes[1].plot(df_section["AC"], df_section[depth_col], color="blue")
         axes[1].grid(linestyle="--", alpha=0.5)
         axes[1].set_xlabel("AC")
         axes[1].set_title("AC")
 
-        # fig2: DEN —— green
-        axes[2].plot(df_section["DEN"], df_section["Depth"], color="green")
+        axes[2].plot(df_section["DEN"], df_section[depth_col], color="green")
         axes[2].grid(linestyle="--", alpha=0.5)
         axes[2].set_xlabel("DEN")
         axes[2].set_title("DEN")
 
-        # fig3: GR —— red
-        axes[3].plot(df_section["GR"], df_section["Depth"], color="red")
+        axes[3].plot(df_section["GR"], df_section[depth_col], color="red")
         axes[3].grid(linestyle="--", alpha=0.5)
         axes[3].set_xlabel("GR")
         axes[3].set_title("GR")
 
-        # fig4: CNL —— yellow
-        axes[4].plot(df_section["CNL"], df_section["Depth"], color="yellow")
+        axes[4].plot(df_section["CNL"], df_section[depth_col], color="yellow")
         axes[4].grid(linestyle="--", alpha=0.5)
         axes[4].set_xlabel("CNL")
         axes[4].set_title("CNL")
 
-        # fig5: RLLD & RLLS —— purple & orange
+        # RLLD & RLLS
         axes[5].plot(
-            df_section["RLLD"], df_section["Depth"], color="purple", label="RLLD"
+            df_section["RLLD"], df_section[depth_col], color="purple", label="RLLD"
         )
         axes[5].plot(
-            df_section["RLLS"], df_section["Depth"], color="orange", label="RLLS"
+            df_section["RLLS"], df_section[depth_col], color="orange", label="RLLS"
         )
         axes[5].grid(linestyle="--", alpha=0.5)
         axes[5].set_xlabel("RLLD - RLLS")
         axes[5].set_title("RLLD & RLLS")
         axes[5].legend()
 
-        # Rest of the subplots shifted one position
-        # Update indices for remaining plots (6 through 10)
+        # FVA & FVPA
         axes[6].plot(
-            df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
+            df_section["FVPA"], df_section[depth_col], color="brown", label="FVPA"
         )
         axes[6].fill_betweenx(
-            df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
+            df_section[depth_col], df_section["FVPA"], color="brown", alpha=0.5
         )
-        axes[6].plot(df_section["FVA"], df_section["Depth"], color="black", label="FVA")
-        axes[6].fill_betweenx(
-            df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
+        # Add FVA plot (only line, no fill)
+        axes[6].plot(
+            df_section["FVA"], df_section[depth_col], color="black", label="FVA"
         )
         axes[6].grid(linestyle="--", alpha=0.5)
         axes[6].set_xlabel("FVA - FVPA")
         axes[6].set_title("FVA & FVPA")
         axes[6].legend()
 
+        # FVDC
         axes[7].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+            df_section["FVDC"], df_section[depth_col], color="cyan", label="FVDC"
         )
         axes[7].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+            df_section[depth_col], 0, df_section["FVDC"], color="cyan", alpha=0.5
         )
         axes[7].grid(linestyle="--", alpha=0.5)
         axes[7].set_xlabel("FVDC")
         axes[7].set_title("FVDC")
         axes[7].legend()
 
-        axes[8].plot(df_section["Kf"], df_section["Depth"], color="magenta", label="Kf")
+        # Kf
+        axes[8].plot(
+            df_section["Kf"], df_section[depth_col], color="magenta", label="Kf"
+        )
         axes[8].fill_betweenx(
-            df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
+            df_section[depth_col], df_section["Kf"], color="magenta", alpha=0.5
         )
         axes[8].grid(linestyle="--", alpha=0.5)
         axes[8].set_xlabel("Kf")
         axes[8].set_title("Kf")
         axes[8].legend()
 
-        axes[9].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
-        )
-        axes[9].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
-        )
-        axes[9].grid(linestyle="--", alpha=0.5)
-        axes[9].set_xlabel("FVDC")
+        # 使用线段
+        axes[9].set_xlabel("解释结论")
         axes[9].set_title("解释结论")
-        axes[9].legend()
+        axes[9].grid(linestyle="--", alpha=0.5)
+
+        # Define color mapping
+        colors = {0: "white", 1: "green", 2: "blue", 3: "yellow"}
+
+        # Get depth and interpretation result values
+        depths = df_section[depth_col].values
+        results = df_section["解释结论"].values
+
+        # Plot lines for each interpretation result
+        for i in range(len(depths)):
+            result = results[i]
+            if pd.notna(result):
+                result = int(result)  # Ensure it's an integer
+                color = colors[result]  # 直接使用映射的颜色
+                # Draw horizontal line at each depth
+                axes[9].hlines(y=depths[i], xmin=0, xmax=1, color=color, linewidth=2)
+
+        # Set appropriate x-axis limits
+        axes[9].set_xlim(0, 1)
 
         # FMI image
         fmi_image_path = resource_path("data/example.jpg")
@@ -413,7 +791,7 @@ class ParameterCalculationPage(QWidget):
             axes[10].imshow(
                 fmi_img,
                 aspect="auto",
-                extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
+                extent=[0, 1, max(df_section[depth_col]), min(df_section[depth_col])],
             )
         axes[10].set_title("FMI")
         axes[10].axis("off")

@@ -15,6 +15,7 @@ from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import shutil
 
 from pages.config import GlobalData, resource_path
 
@@ -108,136 +109,31 @@ class DistributionPage(QWidget):
 
     def download_image(self):
         if not hasattr(self, "image_label") or self.image_label.pixmap() is None:
-            QMessageBox.warning(self, "警告", "没有可下载的图片，请先运行裂缝识别。")
+            QMessageBox.warning(
+                self, "警告", "没有可下载的图片，请先运行录井数据分布图。"
+            )
             return
 
-        file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "保存图片", "distribution_plot", "PNG 图片 (*.png);;PDF 文档 (*.pdf)"
+        pdf_path, _ = QFileDialog.getSaveFileName(
+            self, "保存PDF文件", "", "PDF 文件 (*.pdf)"
         )
 
-        if file_path:
-            # 根据选择的格式重新生成图片
-            start_depth = float(self.start_depth_input.text())
-            end_depth = float(self.end_depth_input.text())
-
-            # 获取当前图表数据
-            df = GlobalData.filtered_df
-            df_section = df[(df["井深"] >= start_depth) & (df["井深"] < end_depth)]
-
-            if df_section.empty:
-                QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
-                return
-
-            # 重新绘制图表
-            fig, axes = plt.subplots(nrows=2, ncols=7, figsize=(24, 16))
-
-            # 复制之前的绘图代码
-            scatter_axes = axes[0]
-            for ax in scatter_axes:
-                ax.set_ylim(bottom=max(df_section["井深"]), top=min(df_section["井深"]))
-
-            # 绘制散点图
-            scatter_axes[0].scatter(
-                df_section["漏失速度"], df_section["井深"], color="blue"
-            )
-            scatter_axes[0].grid(linestyle="--", alpha=0.5)
-            scatter_axes[0].set_xlabel("漏失速度")
-            scatter_axes[0].set_ylabel("井深 (m)")
-            scatter_axes[0].set_title("漏失速度 (散点图)")
-
-            scatter_axes[1].scatter(
-                df_section["漏失量"], df_section["井深"], color="green"
-            )
-            scatter_axes[1].grid(linestyle="--", alpha=0.5)
-            scatter_axes[1].set_xlabel("漏失量")
-            scatter_axes[1].set_title("漏失量 (散点图)")
-
-            scatter_axes[2].scatter(
-                df_section["塑性黏度"], df_section["井深"], color="red"
-            )
-            scatter_axes[2].grid(linestyle="--", alpha=0.5)
-            scatter_axes[2].set_xlabel("塑性黏度")
-            scatter_axes[2].set_title("塑性黏度 (散点图)")
-
-            scatter_axes[3].scatter(
-                df_section["钻速"], df_section["井深"], color="purple"
-            )
-            scatter_axes[3].grid(linestyle="--", alpha=0.5)
-            scatter_axes[3].set_xlabel("钻速")
-            scatter_axes[3].set_title("钻速 (散点图)")
-
-            scatter_axes[4].scatter(
-                df_section["钻井液排量"], df_section["井深"], color="orange"
-            )
-            scatter_axes[4].grid(linestyle="--", alpha=0.5)
-            scatter_axes[4].set_xlabel("钻井液排量")
-            scatter_axes[4].set_title("钻井液排量 (散点图)")
-
-            scatter_axes[5].scatter(
-                df_section["泵压"], df_section["井深"], color="cyan"
-            )
-            scatter_axes[5].grid(linestyle="--", alpha=0.5)
-            scatter_axes[5].set_xlabel("泵压")
-            scatter_axes[5].set_title("泵压 (散点图)")
-
-            scatter_axes[6].scatter(
-                df_section["裂缝宽度"], df_section["井深"], color="magenta"
-            )
-            scatter_axes[6].grid(linestyle="--", alpha=0.5)
-            scatter_axes[6].set_xlabel("裂缝宽度")
-            scatter_axes[6].set_title("裂缝宽度 (散点图)")
-
-            # 绘制直方图
-            hist_axes = axes[1]
-            hist_axes[0].hist(df_section["漏失速度"], bins=15, color="blue", alpha=0.7)
-            hist_axes[0].grid(linestyle="--", alpha=0.5)
-            hist_axes[0].set_xlabel("漏失速度")
-            hist_axes[0].set_ylabel("频次")
-            hist_axes[0].set_title("漏失速度 (直方图)")
-
-            hist_axes[1].hist(df_section["漏失量"], bins=15, color="green", alpha=0.7)
-            hist_axes[1].grid(linestyle="--", alpha=0.5)
-            hist_axes[1].set_xlabel("漏失量")
-            hist_axes[1].set_title("漏失量 (直方图)")
-
-            hist_axes[2].hist(df_section["塑性黏度"], bins=15, color="red", alpha=0.7)
-            hist_axes[2].grid(linestyle="--", alpha=0.5)
-            hist_axes[2].set_xlabel("塑性黏度")
-            hist_axes[2].set_title("塑性黏度 (直方图)")
-
-            hist_axes[3].hist(df_section["钻速"], bins=15, color="purple", alpha=0.7)
-            hist_axes[3].grid(linestyle="--", alpha=0.5)
-            hist_axes[3].set_xlabel("钻速")
-            hist_axes[3].set_title("钻速 (直方图)")
-
-            hist_axes[4].hist(
-                df_section["钻井液排量"], bins=15, color="orange", alpha=0.7
-            )
-            hist_axes[4].grid(linestyle="--", alpha=0.5)
-            hist_axes[4].set_xlabel("钻井液排量")
-            hist_axes[4].set_title("钻井液排量 (直方图)")
-
-            hist_axes[5].hist(df_section["泵压"], bins=15, color="cyan", alpha=0.7)
-            hist_axes[5].grid(linestyle="--", alpha=0.5)
-            hist_axes[5].set_xlabel("泵压")
-            hist_axes[5].set_title("泵压 (直方图)")
-
-            hist_axes[6].hist(
-                df_section["裂缝宽度"], bins=15, color="magenta", alpha=0.7
-            )
-            hist_axes[6].grid(linestyle="--", alpha=0.5)
-            hist_axes[6].set_xlabel("裂缝宽度")
-            hist_axes[6].set_title("裂缝宽度 (直方图)")
-
-            plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=16)
-            plt.tight_layout()
-
-            # 根据选择的格式保存图片
-            format_type = "png" if selected_filter == "PNG 图片 (*.png)" else "pdf"
-            plt.savefig(file_path, dpi=300, bbox_inches="tight", format=format_type)
-            plt.close()
-
-            QMessageBox.information(self, "成功", f"图片已成功保存至：\n{file_path}")
+        if pdf_path:
+            try:
+                # 直接复制之前生成的 PDF 文件
+                if hasattr(self, "current_pdf_path") and os.path.exists(
+                    self.current_pdf_path
+                ):
+                    shutil.copy2(self.current_pdf_path, pdf_path)
+                    QMessageBox.information(
+                        self, "成功", f"图片已成功保存为可编辑的PDF：\n{pdf_path}"
+                    )
+                else:
+                    QMessageBox.warning(
+                        self, "警告", "找不到PDF文件，请重新运行录井数据分布图。"
+                    )
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
 
     def run_data_distribution(self):
         QApplication.processEvents()
@@ -246,10 +142,13 @@ class DistributionPage(QWidget):
         end_depth = float(self.end_depth_input.text())
 
         file_path = self.current_file_path if self.current_file_path else None
-        image_path = self.plot_resistivity_log(file_path, start_depth, end_depth)
+        image_path, pdf_path = self.plot_resistivity_log(
+            file_path, start_depth, end_depth
+        )
 
         if image_path:
             self.show_image(image_path)
+            self.current_pdf_path = pdf_path
             self.status_label.setText("状态: 处理完成 ✅")
         else:
             self.status_label.setText("状态: 处理失败 ❌")
@@ -263,7 +162,7 @@ class DistributionPage(QWidget):
 
         if df is None:
             self.status_label.setText("❌ 数据为空，请上传或加载数据。")
-            return None
+            return None, None
 
         required_columns = [
             "井深",
@@ -279,13 +178,13 @@ class DistributionPage(QWidget):
             QMessageBox.critical(
                 self, "错误", f"输入文件必须包含列: {required_columns}"
             )
-            return None
+            return None, None
 
         df_section = df[(df["井深"] >= start_depth) & (df["井深"] < end_depth)]
 
         if df_section.empty:
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
-            return None
+            return None, None
 
         # Create a figure with 2 rows - scatter plots on top and histograms below
         fig, axes = plt.subplots(nrows=2, ncols=7, figsize=(24, 16))
@@ -304,25 +203,21 @@ class DistributionPage(QWidget):
         scatter_axes[0].set_ylabel("井深 (m)")
         scatter_axes[0].set_title("漏失速度 (散点图)")
 
-        # fig2: 漏失量 - green
         scatter_axes[1].scatter(df_section["漏失量"], df_section["井深"], color="green")
         scatter_axes[1].grid(linestyle="--", alpha=0.5)
         scatter_axes[1].set_xlabel("漏失量")
         scatter_axes[1].set_title("漏失量 (散点图)")
 
-        # fig3: 塑性黏度 - red
         scatter_axes[2].scatter(df_section["塑性黏度"], df_section["井深"], color="red")
         scatter_axes[2].grid(linestyle="--", alpha=0.5)
         scatter_axes[2].set_xlabel("塑性黏度")
         scatter_axes[2].set_title("塑性黏度 (散点图)")
 
-        # fig4: 钻速 - purple
         scatter_axes[3].scatter(df_section["钻速"], df_section["井深"], color="purple")
         scatter_axes[3].grid(linestyle="--", alpha=0.5)
         scatter_axes[3].set_xlabel("钻速")
         scatter_axes[3].set_title("钻速 (散点图)")
 
-        # fig5: 钻井液排量 - orange
         scatter_axes[4].scatter(
             df_section["钻井液排量"], df_section["井深"], color="orange"
         )
@@ -330,13 +225,11 @@ class DistributionPage(QWidget):
         scatter_axes[4].set_xlabel("钻井液排量")
         scatter_axes[4].set_title("钻井液排量 (散点图)")
 
-        # fig6: 泵压 - cyan
         scatter_axes[5].scatter(df_section["泵压"], df_section["井深"], color="cyan")
         scatter_axes[5].grid(linestyle="--", alpha=0.5)
         scatter_axes[5].set_xlabel("泵压")
         scatter_axes[5].set_title("泵压 (散点图)")
 
-        # fig7: 裂缝宽度 - magenta
         scatter_axes[6].scatter(
             df_section["裂缝宽度"], df_section["井深"], color="magenta"
         )
@@ -344,47 +237,39 @@ class DistributionPage(QWidget):
         scatter_axes[6].set_xlabel("裂缝宽度")
         scatter_axes[6].set_title("裂缝宽度 (散点图)")
 
-        # Bottom row for histograms (axes[1])
+        # 绘制直方图
         hist_axes = axes[1]
-
-        # Histogram 1: 漏失速度 - blue
         hist_axes[0].hist(df_section["漏失速度"], bins=15, color="blue", alpha=0.7)
         hist_axes[0].grid(linestyle="--", alpha=0.5)
         hist_axes[0].set_xlabel("漏失速度")
         hist_axes[0].set_ylabel("频次")
         hist_axes[0].set_title("漏失速度 (直方图)")
 
-        # Histogram 2: 漏失量 - green
         hist_axes[1].hist(df_section["漏失量"], bins=15, color="green", alpha=0.7)
         hist_axes[1].grid(linestyle="--", alpha=0.5)
         hist_axes[1].set_xlabel("漏失量")
         hist_axes[1].set_title("漏失量 (直方图)")
 
-        # Histogram 3: 塑性黏度 - red
         hist_axes[2].hist(df_section["塑性黏度"], bins=15, color="red", alpha=0.7)
         hist_axes[2].grid(linestyle="--", alpha=0.5)
         hist_axes[2].set_xlabel("塑性黏度")
         hist_axes[2].set_title("塑性黏度 (直方图)")
 
-        # Histogram 4: 钻速 - purple
         hist_axes[3].hist(df_section["钻速"], bins=15, color="purple", alpha=0.7)
         hist_axes[3].grid(linestyle="--", alpha=0.5)
         hist_axes[3].set_xlabel("钻速")
         hist_axes[3].set_title("钻速 (直方图)")
 
-        # Histogram 5: 钻井液排量 - orange
         hist_axes[4].hist(df_section["钻井液排量"], bins=15, color="orange", alpha=0.7)
         hist_axes[4].grid(linestyle="--", alpha=0.5)
         hist_axes[4].set_xlabel("钻井液排量")
         hist_axes[4].set_title("钻井液排量 (直方图)")
 
-        # Histogram 6: 泵压 - cyan
         hist_axes[5].hist(df_section["泵压"], bins=15, color="cyan", alpha=0.7)
         hist_axes[5].grid(linestyle="--", alpha=0.5)
         hist_axes[5].set_xlabel("泵压")
         hist_axes[5].set_title("泵压 (直方图)")
 
-        # Histogram 7: 裂缝宽度 - magenta
         hist_axes[6].hist(df_section["裂缝宽度"], bins=15, color="magenta", alpha=0.7)
         hist_axes[6].grid(linestyle="--", alpha=0.5)
         hist_axes[6].set_xlabel("裂缝宽度")
@@ -393,13 +278,21 @@ class DistributionPage(QWidget):
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=16)
         plt.tight_layout()
 
+        # 保存 PNG 和 PDF 版本
         output_dir = resource_path("img/data_distribution/")
         os.makedirs(output_dir, exist_ok=True)
+
+        # 保存 PNG 用于显示
         image_path = os.path.join(output_dir, "data_distribution.png")
-        plt.savefig(image_path, dpi=300, bbox_inches="tight", format="png")
+        plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+        # 保存矢量 PDF 用于下载
+        pdf_path = os.path.join(output_dir, "data_distribution.pdf")
+        plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
         plt.close()
 
-        return image_path
+        return image_path, pdf_path
 
     def show_image(self, image_path):
         pixmap = QPixmap(image_path)

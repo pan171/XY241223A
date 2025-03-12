@@ -17,6 +17,7 @@ import numpy as np
 import os
 import pandas as pd
 from PIL import Image
+import shutil
 
 from pages.config import GlobalData, resource_path
 
@@ -141,25 +142,23 @@ class CrackIdentificationPage(QWidget):
             return
 
         pdf_path, _ = QFileDialog.getSaveFileName(
-            self, "保存PDF文件", "crack_identification.pdf", "PDF 文件 (*.pdf)"
+            self, "保存PDF文件", "", "PDF 文件 (*.pdf)"
         )
-
         if pdf_path:
             try:
-                # 获取原始图像路径
-                image_path = resource_path(
-                    "img/crack_identification/crack_identification.png"
+                # Get the pre-generated PDF path
+                source_pdf_path = resource_path(
+                    "img/crack_identification/crack_identification.pdf"
                 )
 
-                # 使用PIL打开图像并保存为PDF
-                image = Image.open(image_path)
-                image.save(pdf_path, "PDF", resolution=100.0)
+                # Simply copy the already-generated vector PDF
+                shutil.copy2(source_pdf_path, pdf_path)
 
                 QMessageBox.information(
-                    self, "成功", f"图片已成功保存为PDF：\n{pdf_path}"
+                    self, "成功", f"图片已成功保存为可编辑的PDF：\n{pdf_path}"
                 )
             except Exception as e:
-                QMessageBox.critical(self, "错误", f"保存PDF时出错：{str(e)}")
+                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
 
     def run_crack_identification(self):
         QApplication.processEvents()
@@ -328,10 +327,18 @@ class CrackIdentificationPage(QWidget):
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()
 
+        # At the end, save both PNG and PDF versions
         output_dir = resource_path("img/crack_identification/")
         os.makedirs(output_dir, exist_ok=True)
+
+        # Save PNG for display
         image_path = os.path.join(output_dir, "crack_identification.png")
         plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+        # Save vector PDF for download
+        pdf_path = os.path.join(output_dir, "crack_identification.pdf")
+        plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
         plt.close()
 
         return image_path

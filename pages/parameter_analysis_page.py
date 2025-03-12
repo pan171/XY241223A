@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
+import shutil
 
 from pages.config import GlobalData, resource_path
 
@@ -197,222 +198,19 @@ class ParameterAnalysis(QWidget):
         )
         if pdf_path:
             try:
-                # 使用已生成的图表数据重新创建一个PDF版本
-                fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 10))
+                # 获取预生成的 PDF 路径
+                source_pdf_path = resource_path(
+                    "img/parameter_analysis/parameter_analysis.pdf"
+                )
 
-                # 获取当前数据范围
-                df_section = GlobalData.filtered_df
-                start_depth = float(self.start_depth_input.text())
-                end_depth = float(self.end_depth_input.text())
-
-                df_section = df_section[
-                    (df_section["Depth"] >= start_depth)
-                    & (df_section["Depth"] < end_depth)
-                ]
-
-                # 安全的累计频率计算函数
-                def safe_cumulative_freq(data, bins, ax):
-                    try:
-                        # 移除无效值
-                        valid_data = data.replace([np.inf, -np.inf], np.nan).dropna()
-                        if len(valid_data) == 0:
-                            return [], [], []
-
-                        n, bins_out, patches = ax.hist(
-                            valid_data, bins=bins, color="blue", alpha=0.7
-                        )
-                        ax.clear()  # 清除测试直方图
-                        cumsum = np.cumsum(n)
-                        if len(cumsum) > 0 and cumsum[-1] > 0:
-                            normalized = cumsum / cumsum[-1]
-                        else:
-                            normalized = cumsum
-                        return n, bins_out, normalized
-                    except Exception:
-                        # 如果出现任何错误，返回空数组
-                        return [], [], []
-
-                # Plot FVPA distribution
-                try:
-                    fvpa_max = (
-                        df_section["FVPA"].replace([np.inf, -np.inf], np.nan).max()
-                    )
-                    fvpa_bins = np.linspace(
-                        0, fvpa_max if not np.isnan(fvpa_max) else 1, 6
-                    )
-                    n1, bins1, norm1 = safe_cumulative_freq(
-                        df_section["FVPA"], fvpa_bins, ax1
-                    )
-
-                    ax1.hist(
-                        df_section["FVPA"],
-                        bins=fvpa_bins,
-                        color="blue",
-                        alpha=0.7,
-                        label="频率",
-                    )
-                    ax1_cum = ax1.twinx()
-                    if len(norm1) > 0:
-                        line1 = ax1_cum.plot(
-                            bins1[:-1],
-                            norm1,
-                            color="red",
-                            linewidth=2,
-                            label="累计频率",
-                        )[0]
-                        ax1_cum.set_ylim(0, 1)
-
-                        # 添加图例
-                        lines1, labels1 = ax1.get_legend_handles_labels()
-                        lines2, labels2 = ax1_cum.get_legend_handles_labels()
-                        ax1.legend(
-                            lines1 + [line1], labels1 + labels2, loc="upper right"
-                        )
-                except Exception:
-                    pass
-
-                ax1.set_title("裂缝宽度分布特征")
-                ax1.set_xlabel("裂缝宽度 (mm)")
-                ax1.set_ylabel("频率")
-                ax1.grid(True, linestyle="--", alpha=0.5)
-
-                # Plot FVA distribution
-                try:
-                    fva_max = df_section["FVA"].replace([np.inf, -np.inf], np.nan).max()
-                    fva_bins = np.linspace(
-                        0, fva_max if not np.isnan(fva_max) else 1, 6
-                    )
-                    n2, bins2, norm2 = safe_cumulative_freq(
-                        df_section["FVA"], fva_bins, ax2
-                    )
-
-                    ax2.hist(
-                        df_section["FVA"],
-                        bins=fva_bins,
-                        color="orange",
-                        alpha=0.7,
-                        label="频率",
-                    )
-                    ax2_cum = ax2.twinx()
-                    if len(norm2) > 0:
-                        line2 = ax2_cum.plot(
-                            bins2[:-1],
-                            norm2,
-                            color="red",
-                            linewidth=2,
-                            label="累计频率",
-                        )[0]
-                        ax2_cum.set_ylim(0, 1)
-
-                        # 添加图例
-                        lines1, labels1 = ax2.get_legend_handles_labels()
-                        lines2, labels2 = ax2_cum.get_legend_handles_labels()
-                        ax2.legend(
-                            lines1 + [line2], labels1 + labels2, loc="upper right"
-                        )
-                except Exception:
-                    pass
-
-                ax2.set_title("裂缝孔隙度分布特征")
-                ax2.set_xlabel("裂缝孔隙度 (%)")
-                ax2.set_ylabel("频率")
-                ax2.grid(True, linestyle="--", alpha=0.5)
-
-                # Plot FVDC distribution
-                try:
-                    fvdc_max = (
-                        df_section["FVDC"].replace([np.inf, -np.inf], np.nan).max()
-                    )
-                    fvdc_bins = np.linspace(
-                        0, fvdc_max if not np.isnan(fvdc_max) else 1, 6
-                    )
-                    n3, bins3, norm3 = safe_cumulative_freq(
-                        df_section["FVDC"], fvdc_bins, ax3
-                    )
-
-                    ax3.hist(
-                        df_section["FVDC"],
-                        bins=fvdc_bins,
-                        color="green",
-                        alpha=0.7,
-                        label="频率",
-                    )
-                    ax3_cum = ax3.twinx()
-                    if len(norm3) > 0:
-                        line3 = ax3_cum.plot(
-                            bins3[:-1],
-                            norm3,
-                            color="red",
-                            linewidth=2,
-                            label="累计频率",
-                        )[0]
-                        ax3_cum.set_ylim(0, 1)
-
-                        # 添加图例
-                        lines1, labels1 = ax3.get_legend_handles_labels()
-                        lines2, labels2 = ax3_cum.get_legend_handles_labels()
-                        ax3.legend(
-                            lines1 + [line3], labels1 + labels2, loc="upper right"
-                        )
-                except Exception:
-                    pass
-
-                ax3.set_title("裂缝密度分布特征")
-                ax3.set_xlabel("裂缝密度")
-                ax3.set_ylabel("频率")
-                ax3.grid(True, linestyle="--", alpha=0.5)
-
-                # Plot Kf distribution
-                try:
-                    kf_max = df_section["Kf"].replace([np.inf, -np.inf], np.nan).max()
-                    kf_bins = np.linspace(0, kf_max if not np.isnan(kf_max) else 1, 6)
-                    n4, bins4, norm4 = safe_cumulative_freq(
-                        df_section["Kf"], kf_bins, ax4
-                    )
-
-                    ax4.hist(
-                        df_section["Kf"],
-                        bins=kf_bins,
-                        color="red",
-                        alpha=0.7,
-                        label="频率",
-                    )
-                    ax4_cum = ax4.twinx()
-                    if len(norm4) > 0:
-                        line4 = ax4_cum.plot(
-                            bins4[:-1],
-                            norm4,
-                            color="blue",
-                            linewidth=2,
-                            label="累计频率",
-                        )[0]
-                        ax4_cum.set_ylim(0, 1)
-
-                        # 添加图例
-                        lines1, labels1 = ax4.get_legend_handles_labels()
-                        lines2, labels2 = ax4_cum.get_legend_handles_labels()
-                        ax4.legend(
-                            lines1 + [line4], labels1 + labels2, loc="upper right"
-                        )
-                except Exception:
-                    pass
-
-                ax4.set_title("裂缝渗透率分布特征")
-                ax4.set_xlabel("裂缝渗透率")
-                ax4.set_ylabel("频率")
-                ax4.grid(True, linestyle="--", alpha=0.5)
-
-                plt.tight_layout()
-
-                # 直接保存为PDF而不是PNG
-                plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
-                plt.close()
+                # 直接复制已生成的矢量 PDF
+                shutil.copy2(source_pdf_path, pdf_path)
 
                 QMessageBox.information(
-                    self, "成功", f"PDF文件已成功保存至：\n{pdf_path}"
+                    self, "成功", f"图表已成功保存为可编辑的PDF：\n{pdf_path}"
                 )
             except Exception as e:
-                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：\n{str(e)}")
+                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
 
     def run_parameter_analysis(self):
         QApplication.processEvents()
@@ -644,10 +442,18 @@ class ParameterAnalysis(QWidget):
 
         plt.tight_layout()
 
+        # 在绘图结束时保存 PNG 和 PDF
         output_dir = resource_path("img/parameter_analysis/")
         os.makedirs(output_dir, exist_ok=True)
+
+        # 保存 PNG 用于显示
         image_path = os.path.join(output_dir, "parameter_analysis.png")
         plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+        # 保存矢量 PDF 用于下载
+        pdf_path = os.path.join(output_dir, "parameter_analysis.pdf")
+        plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
         plt.close()
 
         return image_path

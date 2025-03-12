@@ -15,6 +15,7 @@ from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import shutil
 
 from pages.config import GlobalData, resource_path
 
@@ -207,25 +208,16 @@ class ParameterCalculationPage(QWidget):
         )
         if pdf_path:
             try:
-                # Get the source image path
-                source_image_path = resource_path(
-                    "img/parameter_calculation/parameter_calculation.png"
+                # Get the pre-generated PDF path
+                source_pdf_path = resource_path(
+                    "img/parameter_calculation/parameter_calculation.pdf"
                 )
 
-                # Create a new figure with the same size as the original plot
-                plt.figure(figsize=(32, 10))
-
-                # Read and display the image
-                img = plt.imread(source_image_path)
-                plt.imshow(img)
-                plt.axis("off")  # Hide axes
-
-                # Save as PDF
-                plt.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
-                plt.close()
+                # Simply copy the already-generated vector PDF
+                shutil.copy2(source_pdf_path, pdf_path)
 
                 QMessageBox.information(
-                    self, "成功", f"图片已成功保存为PDF：\n{pdf_path}"
+                    self, "成功", f"图片已成功保存为可编辑的PDF：\n{pdf_path}"
                 )
             except Exception as e:
                 QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
@@ -567,10 +559,18 @@ class ParameterCalculationPage(QWidget):
             plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
             plt.tight_layout()
 
+            # At the end, save both PNG and PDF versions
             output_dir = resource_path("img/parameter_calculation/")
             os.makedirs(output_dir, exist_ok=True)
+
+            # Save PNG for display
             image_path = os.path.join(output_dir, "parameter_calculation.png")
             plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+            # Save vector PDF for download
+            pdf_path = os.path.join(output_dir, "parameter_calculation.pdf")
+            plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
             plt.close()
 
             return image_path
@@ -799,10 +799,18 @@ class ParameterCalculationPage(QWidget):
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()
 
+        # At the end, save both PNG and PDF versions
         output_dir = resource_path("img/parameter_calculation/")
         os.makedirs(output_dir, exist_ok=True)
+
+        # Save PNG for display
         image_path = os.path.join(output_dir, "parameter_calculation.png")
         plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+        # Save vector PDF for download
+        pdf_path = os.path.join(output_dir, "parameter_calculation.pdf")
+        plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
         plt.close()
 
         return image_path

@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import zipfile
+import shutil
 
 from pages.config import GlobalData, resource_path
 
@@ -46,14 +47,14 @@ class ComprehensiveOutcomePage(QWidget):
 
         # parameters: start, end
         self.start_depth_label = QLabel("start_depth: ")
-        self.start_depth_input = QLineEdit("500")
+        self.start_depth_input = QLineEdit("3500")
         self.start_depth_input.setPlaceholderText("起始深度")
         # self.start_depth_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         comb_1.addWidget(self.start_depth_label)
         comb_1.addWidget(self.start_depth_input)
 
         self.end_depth_label = QLabel("end_depth: ")
-        self.end_depth_input = QLineEdit("1000")
+        self.end_depth_input = QLineEdit("4000")
         self.end_depth_input.setPlaceholderText("结束深度")
         # self.end_depth_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         comb_1.addWidget(self.end_depth_label)
@@ -200,17 +201,24 @@ class ComprehensiveOutcomePage(QWidget):
             )
             return
 
-        zip_path, _ = QFileDialog.getSaveFileName(
-            self, "保存图片压缩包", "comprehensive_outcome.zip", "ZIP 文件 (*.zip)"
+        pdf_path, _ = QFileDialog.getSaveFileName(
+            self, "保存PDF文件", "", "PDF 文件 (*.pdf)"
         )
-        if zip_path:
-            with zipfile.ZipFile(zip_path, "w") as zipf:
-                image_path = resource_path(
-                    "img/comprehensive_outcome/comprehensive_outcome.png"
+        if pdf_path:
+            try:
+                # Get the pre-generated PDF path
+                source_pdf_path = resource_path(
+                    "img/comprehensive_outcome/comprehensive_outcome.pdf"
                 )
-                zipf.write(image_path, os.path.basename(image_path))
 
-            QMessageBox.information(self, "成功", f"图片已成功打包至：\n{zip_path}")
+                # Simply copy the already-generated vector PDF
+                shutil.copy2(source_pdf_path, pdf_path)
+
+                QMessageBox.information(
+                    self, "成功", f"图片已成功保存为可编辑的PDF：\n{pdf_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"保存PDF文件时出错：{str(e)}")
 
     def run_draw_outcome(self):
         QApplication.processEvents()
@@ -277,7 +285,21 @@ class ComprehensiveOutcomePage(QWidget):
             self.status_label.setText("❌ 数据为空，请上传或加载数据。")
             return None
 
-        required_columns = ["Depth", "AC", "DEN", "GR", "CNL", "RLLD", "RLLS"]
+        required_columns = [
+            "Depth",
+            "AC",
+            "DEN",
+            "GR",
+            "CNL",
+            "RLLD",
+            "RLLS",
+            "Kf",
+            "FVA",
+            "FVPA",
+            "FVDC",
+            "Qloss",
+            "解释结论",
+        ]
         if not all(col in df.columns for col in required_columns):
             QMessageBox.critical(
                 self, "错误", f"输入文件必须包含列: {required_columns}"
@@ -294,34 +316,129 @@ class ComprehensiveOutcomePage(QWidget):
         # calc
         # fig6: FVA & FVPA —— black & brown
         # fig7: FVDC & FG —— cyan & magenta
-        df["FVPA"] = (r_mf * ((1 / df["RLLS"]) - (1 / df["RLLD"]))) ** a
-        df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / ((1 / r_mf) - (1 / r_w))
-        df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
-        df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
-        df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
+        # df["FVPA"] = (r_mf * ((1 / df["RLLS"]) - (1 / df["RLLD"]))) ** a
+        # df["FVDC"] = ((1 / df["RLLS"]) - (1 / df["RLLD"])) / ((1 / r_mf) - (1 / r_w))
+        # df["FVA"] = (0.064 / omega) * ((1 - s_wi) * df["FVDC"]) ** b
+        # df["FG"] = c1 * df["FVPA"] + c2 * df["FVA"] + c3 * df["FVDC"]
+        # df["Kf"] = 1.5 * (10**7) * omega * ((1 - s_wi) * df["FVDC"]) ** (2.63)
 
         df_section = df[(df["Depth"] >= start_depth) & (df["Depth"] < end_depth)]
         if df_section.empty:
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
 
-        _, axes = plt.subplots(nrows=1, ncols=12, figsize=(31, 10), sharey=True)
+        # Create figure with GridSpec to control subplot widths
+        _ = plt.figure(figsize=(32, 10))
+        gs = plt.GridSpec(
+            1, 12, width_ratios=[0.25] + [1] * 11
+        )  # Updated to 12 subplots
+        axes = [plt.subplot(gs[0, i]) for i in range(12)]
+
         for ax in axes:
             ax.set_ylim(bottom=max(df_section["Depth"]), top=min(df_section["Depth"]))
+            if ax != axes[0]:
+                ax.set_ylabel("")
+                ax.set_yticks([])
 
-        # 1. axes[0]
+        # 岩性 - Draw rock layers instead of markers
+        axes[0].set_xlabel("岩性")
+        axes[0].set_title("岩性")
         axes[0].set_ylabel("Depth (m)")
-        axes[0].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
-        )
-        axes[0].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
-        )
-        axes[0].grid(linestyle="--", alpha=0.5)
-        axes[0].set_xlabel("padding")
-        axes[0].set_title("padding")
-        axes[0].legend()
+        axes[0].grid(False)
 
+        # Define patterns and colors for each lithology type
+        lithology_patterns = {
+            0: {
+                "hatch": "...",
+                "color": "saddlebrown",
+                "label": "Coarse",
+            },  # Coarse - dark brown
+            1: {
+                "hatch": "++",
+                "color": "peru",
+                "label": "Medium",
+            },  # Medium - medium brown
+            2: {
+                "hatch": "--",
+                "color": "burlywood",
+                "label": "Fine",
+            },  # Fine - light brown
+        }
+
+        # Add default 岩性道 column if not present
+        if "岩性道" not in df_section.columns:
+            df_section["岩性道"] = 1  # Default to medium grain size
+
+        # Group by consecutive lithology values
+        df_section = df_section.copy()
+        df_section["岩性道"] = df_section["岩性道"].astype(float)
+
+        # Create a list to store layer information
+        lithology_layers = []
+        current_litho = None
+        layer_start = None
+
+        # Identify continuous layers
+        for _, row in df_section.sort_values("Depth").iterrows():
+            depth = row["Depth"]
+            litho = row["岩性道"] if pd.notna(row["岩性道"]) else None
+
+            if litho != current_litho:
+                if current_litho is not None and layer_start is not None:
+                    lithology_layers.append((layer_start, depth, current_litho))
+                current_litho = litho
+                layer_start = depth
+
+        # Add the last layer
+        if current_litho is not None and layer_start is not None:
+            lithology_layers.append(
+                (layer_start, max(df_section["Depth"]), current_litho)
+            )
+
+        # Draw the layers
+        legend_elements = []
+        for start_depth, end_depth, litho in lithology_layers:
+            if litho in lithology_patterns:
+                pattern = lithology_patterns[litho]
+                # 增加 hatch 的密度，通过重复 pattern 字符
+                dense_hatch = pattern["hatch"] * 3  # 重复3次增加密度
+
+                # 绘制填充
+                axes[0].fill_betweenx(
+                    [start_depth, end_depth],
+                    0,
+                    1,
+                    color=pattern["color"],
+                    hatch=dense_hatch,
+                    alpha=0.5,  # 降低填充色的透明度使 hatch 更明显
+                    linewidth=0.5,  # 添加轮廓线
+                    edgecolor="black",  # 添加黑色边框
+                )
+
+                # Add black line between layers
+                axes[0].axhline(y=end_depth, color="black", linewidth=0.5)
+
+                # Add to legend (only once per lithology type)
+                if pattern["label"] not in [e.get_label() for e in legend_elements]:
+                    from matplotlib.patches import Patch
+
+                    legend_elements.append(
+                        Patch(
+                            facecolor=pattern["color"],
+                            hatch=dense_hatch,
+                            label=pattern["label"],
+                            alpha=0.5,
+                            linewidth=0.5,
+                            edgecolor="black",
+                        )
+                    )
+
+        # Add legend
+        axes[0].legend(handles=legend_elements, loc="lower center", fontsize="small")
+        axes[0].set_xlim(0, 1)  # Set x-axis limits
+        axes[0].set_xticks([])  # Hide x-axis ticks
+
+        # Plot other curves
         axes[1].plot(df_section["AC"], df_section["Depth"], color="blue")
         axes[1].grid(linestyle="--", alpha=0.5)
         axes[1].set_xlabel("AC")
@@ -353,6 +470,7 @@ class ComprehensiveOutcomePage(QWidget):
         axes[5].set_title("RLLD & RLLS")
         axes[5].legend()
 
+        # Plot FVA and FVPA with additional scatter plots for LT, BP, and FDCNN
         axes[6].plot(
             df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
         )
@@ -363,6 +481,41 @@ class ComprehensiveOutcomePage(QWidget):
         axes[6].fill_betweenx(
             df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
         )
+
+        # Add scatter plots for LT, BP, and FDCNN
+        if "LT" in df_section.columns:
+            non_zero_lt = df_section[df_section["LT"] != 0]
+            axes[6].scatter(
+                non_zero_lt["LT"],
+                non_zero_lt["Depth"],
+                color="red",
+                marker="s",  # square marker
+                s=50,  # marker size
+                label="LT",
+            )
+
+        if "BP" in df_section.columns:
+            non_zero_bp = df_section[df_section["BP"] != 0]
+            axes[6].scatter(
+                non_zero_bp["BP"],
+                non_zero_bp["Depth"],
+                color="black",
+                marker="D",  # diamond marker
+                s=50,  # marker size
+                label="BP",
+            )
+
+        if "FDCNN" in df_section.columns:
+            non_zero_fdcnn = df_section[df_section["FDCNN"] != 0]
+            axes[6].scatter(
+                non_zero_fdcnn["FDCNN"],
+                non_zero_fdcnn["Depth"],
+                color="blue",
+                marker="^",  # triangle marker
+                s=50,  # marker size
+                label="FDCNN",
+            )
+
         axes[6].grid(linestyle="--", alpha=0.5)
         axes[6].set_xlabel("FVA - FVPA")
         axes[6].set_title("FVA & FVPA")
@@ -388,30 +541,71 @@ class ComprehensiveOutcomePage(QWidget):
         axes[8].set_title("Kf")
         axes[8].legend()
 
-        axes[9].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
-        )
-        axes[9].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        # Qloss
+        axes[9].barh(
+            df_section["Depth"],
+            df_section["Qloss"]
+            if "Qloss" in df_section.columns
+            else [0] * len(df_section),
+            height=1,  # 设置柱状图高度
+            color="red",
+            alpha=0.6,
+            label="Qloss",
         )
         axes[9].grid(linestyle="--", alpha=0.5)
-        axes[9].set_xlabel("padding")
-        axes[9].set_title("padding")
-        axes[9].legend()
+        axes[9].set_xlabel("Qloss")
+        axes[9].set_title("Qloss")
+        axes[9].legend(loc="upper right")
 
-        axes[10].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
-        )
-        axes[10].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
-        )
+        # 如果Qloss列不存在，显示提示信息
+        if "Qloss" not in df_section.columns:
+            axes[9].text(
+                0.5,
+                0.5,
+                "No Qloss data",
+                horizontalalignment="center",
+                verticalalignment="center",
+                transform=axes[9].transAxes,
+            )
+
+        # Replace the padding subplot with interpretation results
+        axes[10].set_xlabel("解释结论")
+        axes[10].set_title("解释结论")
         axes[10].grid(linestyle="--", alpha=0.5)
-        axes[10].set_xlabel("padding")
-        axes[10].set_title("padding")
-        axes[10].legend()
 
-        # 3. 插入 FMI 图片
-        fmi_image_path = resource_path("data/example.jpg")  # 确保图片路径正确
+        # Define color mapping
+        colors = {0: "white", 1: "green", 2: "blue", 3: "yellow"}
+
+        # Get depth and interpretation result values
+        depths = df_section["Depth"].values
+
+        # Add default "解释结论" column if it doesn't exist
+        if "解释结论" not in df_section.columns:
+            df_section["解释结论"] = 0
+
+        # Convert to numeric and handle any invalid values
+        df_section["解释结论"] = pd.to_numeric(
+            df_section["解释结论"], errors="coerce"
+        ).fillna(0)
+        # Ensure values are integers
+        df_section["解释结论"] = df_section["解释结论"].astype(int)
+
+        results = df_section["解释结论"].values
+
+        # Plot lines for each interpretation result
+        for i in range(len(depths)):
+            result = int(results[i])  # Convert to int
+            color = colors.get(
+                result, "white"
+            )  # Use get() to handle any unexpected values
+            # Draw horizontal line at each depth with increased line width
+            axes[10].hlines(y=depths[i], xmin=0, xmax=1, color=color, linewidth=3)
+
+        # Set appropriate x-axis limits
+        axes[10].set_xlim(0, 1)
+
+        # FMI image moved to last subplot (axes[11])
+        fmi_image_path = resource_path("data/example.jpg")
         if os.path.exists(fmi_image_path):
             fmi_img = plt.imread(fmi_image_path)
             axes[11].imshow(
@@ -420,15 +614,23 @@ class ComprehensiveOutcomePage(QWidget):
                 extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
             )
         axes[11].set_title("FMI")
-        axes[11].axis("off")  # 不显示坐标轴
+        axes[11].axis("off")
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()
 
+        # 在最后保存图片时同时保存PNG和PDF
         output_dir = resource_path("img/comprehensive_outcome/")
         os.makedirs(output_dir, exist_ok=True)
+
+        # Save PNG for display
         image_path = os.path.join(output_dir, "comprehensive_outcome.png")
         plt.savefig(image_path, dpi=300, bbox_inches="tight")
+
+        # Save vector PDF for download
+        pdf_path = os.path.join(output_dir, "comprehensive_outcome.pdf")
+        plt.savefig(pdf_path, format="pdf", bbox_inches="tight")
+
         plt.close()
 
         return image_path

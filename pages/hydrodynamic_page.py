@@ -104,7 +104,7 @@ class HydrodynamicPage(QWidget):
     def initUI(self):
         # Set global font size and styles - reduced font size
         font_style = "font-size: 14px;"
-        title_style = "font-size: 16px; font-weight: bold; color: #2c3e50;"
+        # title_style = "font-size: 16px; font-weight: bold; color: #2c3e50;"
         label_width = 130  # Increased width for labels to fit content
         input_width = 180  # Increased width for inputs
 

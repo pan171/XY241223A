@@ -18,10 +18,8 @@ from pages.style import CenterDelegate, CenteredComboBoxStyle
 from pages.config import GlobalData
 from scipy.ndimage import gaussian_filter1d
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import numpy as np
 import os
 
 

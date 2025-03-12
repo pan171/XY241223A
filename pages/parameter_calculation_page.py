@@ -15,7 +15,6 @@ from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import zipfile
 
 from pages.config import GlobalData, resource_path
 
@@ -196,17 +195,19 @@ class ParameterCalculationPage(QWidget):
             )
             return
 
-        zip_path, _ = QFileDialog.getSaveFileName(
-            self, "保存图片压缩包", "parameter_calculation.zip", "ZIP 文件 (*.zip)"
+        pdf_path, _ = QFileDialog.getSaveFileName(
+            self, "保存PDF文件", "parameter_calculation.pdf", "PDF 文件 (*.pdf)"
         )
-        if zip_path:
-            with zipfile.ZipFile(zip_path, "w") as zipf:
-                image_path = resource_path(
-                    "img/parameter_calculation/parameter_calculation.png"
-                )
-                zipf.write(image_path, os.path.basename(image_path))
+        if pdf_path:
+            # Save the current figure directly as PDF
+            plt.figure(figsize=(32, 10))
+            pdf_path = resource_path(
+                "img/parameter_calculation/parameter_calculation.png"
+            )
+            plt.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
+            plt.close()
 
-            QMessageBox.information(self, "成功", f"图片已成功打包至：\n{zip_path}")
+            QMessageBox.information(self, "成功", f"图片已成功保存为PDF：\n{pdf_path}")
 
     def run_parameter_calculation(self):
         QApplication.processEvents()
@@ -301,108 +302,121 @@ class ParameterCalculationPage(QWidget):
             QMessageBox.warning(self, "警告", "所选深度范围内无数据。")
             return None
 
-        _, axes = plt.subplots(nrows=1, ncols=10, figsize=(29, 10), sharey=True)
+        # Create figure with GridSpec to control subplot widths
+        _ = plt.figure(figsize=(32, 10))
+        gs = plt.GridSpec(1, 11, width_ratios=[0.25] + [1] * 10)
+        axes = [plt.subplot(gs[0, i]) for i in range(11)]
+
         for ax in axes:
             ax.set_ylim(bottom=max(df_section["Depth"]), top=min(df_section["Depth"]))
+            # Hide ylabel and yticks for all axes except the first one
+            if ax != axes[0]:
+                ax.set_ylabel("")
+                ax.set_yticks([])
 
-        # fig1: AC —— blue
-        axes[0].plot(df_section["AC"], df_section["Depth"], color="blue")
-        axes[0].grid(linestyle="--", alpha=0.5)
-        axes[0].set_xlabel("AC")
-        axes[0].set_title("AC")
+        # 岩性
+        axes[0].set_xlabel("岩性")
+        axes[0].set_title("岩性")
         axes[0].set_ylabel("Depth (m)")
+        axes[0].grid(False)
+        axes[0].set_xticks([])  # Hide x-axis ticks
+
+        # Original subplots shifted one position to the right
+        # fig1: AC —— blue
+        axes[1].plot(df_section["AC"], df_section["Depth"], color="blue")
+        axes[1].grid(linestyle="--", alpha=0.5)
+        axes[1].set_xlabel("AC")
+        axes[1].set_title("AC")
 
         # fig2: DEN —— green
-        axes[1].plot(df_section["DEN"], df_section["Depth"], color="green")
-        axes[1].grid(linestyle="--", alpha=0.5)
-        axes[1].set_xlabel("DEN")
-        axes[1].set_title("DEN")
+        axes[2].plot(df_section["DEN"], df_section["Depth"], color="green")
+        axes[2].grid(linestyle="--", alpha=0.5)
+        axes[2].set_xlabel("DEN")
+        axes[2].set_title("DEN")
 
         # fig3: GR —— red
-        axes[2].plot(df_section["GR"], df_section["Depth"], color="red")
-        axes[2].grid(linestyle="--", alpha=0.5)
-        axes[2].set_xlabel("GR")
-        axes[2].set_title("GR")
+        axes[3].plot(df_section["GR"], df_section["Depth"], color="red")
+        axes[3].grid(linestyle="--", alpha=0.5)
+        axes[3].set_xlabel("GR")
+        axes[3].set_title("GR")
 
         # fig4: CNL —— yellow
-        axes[3].plot(df_section["CNL"], df_section["Depth"], color="yellow")
-        axes[3].grid(linestyle="--", alpha=0.5)
-        axes[3].set_xlabel("CNL")
-        axes[3].set_title("CNL")
+        axes[4].plot(df_section["CNL"], df_section["Depth"], color="yellow")
+        axes[4].grid(linestyle="--", alpha=0.5)
+        axes[4].set_xlabel("CNL")
+        axes[4].set_title("CNL")
 
         # fig5: RLLD & RLLS —— purple & orange
-        axes[4].plot(
+        axes[5].plot(
             df_section["RLLD"], df_section["Depth"], color="purple", label="RLLD"
         )
-        axes[4].plot(
+        axes[5].plot(
             df_section["RLLS"], df_section["Depth"], color="orange", label="RLLS"
         )
-        axes[4].grid(linestyle="--", alpha=0.5)
-        axes[4].set_xlabel("RLLD - RLLS")
-        axes[4].set_title("RLLD & RLLS")
-        axes[4].legend()
-
-        # fig6: FVA & FVPA —— black & brown (改为曲线填充)
-        axes[5].plot(
-            df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
-        )
-        axes[5].fill_betweenx(
-            df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
-        )
-        axes[5].plot(df_section["FVA"], df_section["Depth"], color="black", label="FVA")
-        axes[5].fill_betweenx(
-            df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
-        )
         axes[5].grid(linestyle="--", alpha=0.5)
-        axes[5].set_xlabel("FVA - FVPA")
-        axes[5].set_title("FVA & FVPA")
+        axes[5].set_xlabel("RLLD - RLLS")
+        axes[5].set_title("RLLD & RLLS")
         axes[5].legend()
 
-        # fig7: FVDC
+        # Rest of the subplots shifted one position
+        # Update indices for remaining plots (6 through 10)
         axes[6].plot(
-            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+            df_section["FVPA"], df_section["Depth"], color="brown", label="FVPA"
         )
         axes[6].fill_betweenx(
-            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+            df_section["Depth"], df_section["FVPA"], color="brown", alpha=0.5
+        )
+        axes[6].plot(df_section["FVA"], df_section["Depth"], color="black", label="FVA")
+        axes[6].fill_betweenx(
+            df_section["Depth"], df_section["FVA"], color="black", alpha=0.5
         )
         axes[6].grid(linestyle="--", alpha=0.5)
-        axes[6].set_xlabel("FVDC")
-        axes[6].set_title("FVDC")
+        axes[6].set_xlabel("FVA - FVPA")
+        axes[6].set_title("FVA & FVPA")
         axes[6].legend()
 
-        # fig8: Kf
-        axes[7].plot(df_section["Kf"], df_section["Depth"], color="magenta", label="Kf")
-        axes[7].fill_betweenx(
-            df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
-        )
-        axes[7].grid(linestyle="--", alpha=0.5)
-        axes[7].set_xlabel("Kf")
-        axes[7].set_title("Kf")
-        axes[7].legend()
-
-        # fig9: padding
-        axes[8].plot(
+        axes[7].plot(
             df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
         )
-        axes[8].fill_betweenx(
+        axes[7].fill_betweenx(
             df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
         )
+        axes[7].grid(linestyle="--", alpha=0.5)
+        axes[7].set_xlabel("FVDC")
+        axes[7].set_title("FVDC")
+        axes[7].legend()
+
+        axes[8].plot(df_section["Kf"], df_section["Depth"], color="magenta", label="Kf")
+        axes[8].fill_betweenx(
+            df_section["Depth"], df_section["Kf"], color="magenta", alpha=0.5
+        )
         axes[8].grid(linestyle="--", alpha=0.5)
-        axes[8].set_xlabel("FVDC")
-        axes[8].set_title("Padding")
+        axes[8].set_xlabel("Kf")
+        axes[8].set_title("Kf")
         axes[8].legend()
 
-        # fig10:FMI image
-        fmi_image_path = resource_path("data/example.jpg")  # 确保图片路径正确
+        axes[9].plot(
+            df_section["FVDC"], df_section["Depth"], color="cyan", label="FVDC"
+        )
+        axes[9].fill_betweenx(
+            df_section["Depth"], 0, df_section["FVDC"], color="cyan", alpha=0.5
+        )
+        axes[9].grid(linestyle="--", alpha=0.5)
+        axes[9].set_xlabel("FVDC")
+        axes[9].set_title("解释结论")
+        axes[9].legend()
+
+        # FMI image
+        fmi_image_path = resource_path("data/example.jpg")
         if os.path.exists(fmi_image_path):
             fmi_img = plt.imread(fmi_image_path)
-            axes[9].imshow(
+            axes[10].imshow(
                 fmi_img,
                 aspect="auto",
                 extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
             )
-        axes[9].set_title("FMI")
-        axes[9].axis("off")  # 不显示坐标轴
+        axes[10].set_title("FMI")
+        axes[10].axis("off")
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()

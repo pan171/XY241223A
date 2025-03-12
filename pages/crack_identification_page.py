@@ -16,9 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import zipfile
-from PIL import Image  # 添加PIL库用于图像处理
-import io
+from PIL import Image
 
 from pages.config import GlobalData, resource_path
 

@@ -11,14 +11,12 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QGroupBox,
     QFrame,
-    QCheckBox,
     QRadioButton,
     QButtonGroup,
 )
 import numpy as np
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -114,7 +112,7 @@ class FDCNNPage(QWidget):
     def initUI(self):
         # Set global font size and styles
         font_style = "font-size: 14px;"
-        title_style = "font-size: 16px; font-weight: bold; color: #2c3e50;"
+        # title_style = "font-size: 16px; font-weight: bold; color: #2c3e50;"
         label_width = 150  # Width for labels
         input_width = 180  # Width for inputs
 

@@ -15,7 +15,6 @@ from PyQt5.QtGui import QPixmap
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import zipfile
 import numpy as np
 
 from pages.config import GlobalData, resource_path

@@ -174,11 +174,14 @@ class ComprehensiveOutcomePage(QWidget):
         if file_path:
             output_dir = resource_path("img/")
             os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, "fmi_example.png")
+            output_path = os.path.join(output_dir, "upload_fmi.jpg")
             try:
                 with open(file_path, "rb") as src, open(output_path, "wb") as dst:
                     dst.write(src.read())
                 QMessageBox.information(self, "成功", "FMI 图片上传成功！")
+                # Update the image display if possible
+                if hasattr(self, "current_file_path") and self.current_file_path:
+                    self.run_draw_outcome()
             except Exception as e:
                 QMessageBox.critical(self, "错误", f"图片上传失败: {str(e)}")
 
@@ -603,8 +606,15 @@ class ComprehensiveOutcomePage(QWidget):
         # Set appropriate x-axis limits
         axes[10].set_xlim(0, 1)
 
-        # FMI image moved to last subplot (axes[11])
-        fmi_image_path = resource_path("data/example.jpg")
+        # Check for uploaded FMI image first, fall back to default if not found
+        uploaded_fmi_path = resource_path("img/upload_fmi.jpg")
+        default_fmi_path = resource_path("data/example.jpg")
+
+        if os.path.exists(uploaded_fmi_path):
+            fmi_image_path = uploaded_fmi_path
+        else:
+            fmi_image_path = default_fmi_path
+
         if os.path.exists(fmi_image_path):
             fmi_img = plt.imread(fmi_image_path)
             axes[11].imshow(

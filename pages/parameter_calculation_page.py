@@ -188,7 +188,7 @@ class ParameterCalculationPage(QWidget):
         if file_path:
             output_dir = resource_path("img/")
             os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, "fmi_example.png")
+            output_path = os.path.join(output_dir, "upload_fmi.jpg")
             try:
                 with open(file_path, "rb") as src, open(output_path, "wb") as dst:
                     dst.write(src.read())
@@ -552,17 +552,34 @@ class ParameterCalculationPage(QWidget):
             # Set appropriate x-axis limits
             axes[9].set_xlim(0, 1)
 
-            # FMI image
-            fmi_image_path = resource_path("data/example.jpg")
-            if os.path.exists(fmi_image_path):
-                fmi_img = plt.imread(fmi_image_path)
+            # FMI image - first check if uploaded image exists, otherwise use default
+            uploaded_fmi_path = resource_path("img/upload_fmi.jpg")
+            default_fmi_path = resource_path("data/example.jpg")
+
+            if os.path.exists(uploaded_fmi_path):
+                fmi_img = plt.imread(uploaded_fmi_path)
+            elif os.path.exists(default_fmi_path):
+                fmi_img = plt.imread(default_fmi_path)
+            else:
+                # No FMI image available
+                axes[10].text(
+                    0.5,
+                    0.5,
+                    "No FMI image available",
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+                axes[10].set_title("FMI")
+                axes[10].axis("off")
+
+            if "fmi_img" in locals():
                 axes[10].imshow(
                     fmi_img,
                     aspect="auto",
                     extent=[0, 1, max(df_section["Depth"]), min(df_section["Depth"])],
                 )
-            axes[10].set_title("FMI")
-            axes[10].axis("off")
+                axes[10].set_title("FMI")
+                axes[10].axis("off")
 
             plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
             plt.tight_layout()
@@ -800,17 +817,34 @@ class ParameterCalculationPage(QWidget):
         # Set appropriate x-axis limits
         axes[9].set_xlim(0, 1)
 
-        # FMI image
-        fmi_image_path = resource_path("data/example.jpg")
-        if os.path.exists(fmi_image_path):
-            fmi_img = plt.imread(fmi_image_path)
+        # FMI image - first check if uploaded image exists, otherwise use default
+        uploaded_fmi_path = resource_path("img/upload_fmi.jpg")
+        default_fmi_path = resource_path("data/example.jpg")
+
+        if os.path.exists(uploaded_fmi_path):
+            fmi_img = plt.imread(uploaded_fmi_path)
+        elif os.path.exists(default_fmi_path):
+            fmi_img = plt.imread(default_fmi_path)
+        else:
+            # No FMI image available
+            axes[10].text(
+                0.5,
+                0.5,
+                "No FMI image available",
+                horizontalalignment="center",
+                verticalalignment="center",
+            )
+            axes[10].set_title("FMI")
+            axes[10].axis("off")
+
+        if "fmi_img" in locals():
             axes[10].imshow(
                 fmi_img,
                 aspect="auto",
                 extent=[0, 1, max(df_section[depth_col]), min(df_section[depth_col])],
             )
-        axes[10].set_title("FMI")
-        axes[10].axis("off")
+            axes[10].set_title("FMI")
+            axes[10].axis("off")
 
         plt.suptitle(f"Depth Range: {start_depth}-{end_depth} m", fontsize=14)
         plt.tight_layout()

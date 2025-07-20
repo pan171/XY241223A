@@ -4,6 +4,7 @@
 conda create -n pyqt python=3.10
 source activate pyqt
 
+conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cpuonly -c pytorch
 pip install -r requirements.txt
 ```
 
